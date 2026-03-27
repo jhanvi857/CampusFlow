@@ -1,0 +1,113 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Manrope', 'Segoe UI', Arial, sans-serif;
+  background:
+    radial-gradient(circle at 12% 16%, rgba(0, 119, 182, 0.12), transparent 44%),
+    radial-gradient(circle at 88% 8%, rgba(28, 57, 187, 0.11), transparent 38%),
+    #F2F8FD;
+  color: #11283E;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  line-height: 1.2;
+}
+
+p {
+  line-height: 1.65;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #EAF4FC;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7AB7DF;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0077B6;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #0077B6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Smooth transitions globally */
+a, button, input, select {
+  transition: all 0.2s ease;
+}
+
+/* Custom table styles */
+.table-row-hover:hover {
+  background-color: #F7FBFF;
+}
+
+/* Timetable grid */
+.timetable-cell {
+  transition: all 0.2s ease;
+}
+
+.timetable-cell:hover {
+  transform: scale(1.02);
+  z-index: 10;
+}
+
+.cta-bg {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76) 0%, rgba(242, 248, 253, 0.96) 100%),
+    linear-gradient(120deg, rgba(0, 119, 182, 0.11) 0%, rgba(28, 57, 187, 0.09) 52%, rgba(255, 255, 255, 0.97) 100%);
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.gradient-border {
+  background: linear-gradient(135deg, #0077B6, #1C39BB, #005A8B, #0077B6);
+  background-size: 300% 300%;
+  animation: gradientShift 6s ease infinite;
+}
+
+.badge-active {
+  @apply border border-green-200 bg-green-50 text-green-700;
+}
+
+.badge-conflict {
+  @apply border border-red-200 bg-red-50 text-red-700;
+}
+
+.badge-pending {
+  @apply border border-yellow-200 bg-yellow-50 text-yellow-700;
+}
+
+.badge-resolved {
+  @apply border border-blue-200 bg-blue-50 text-blue-700;
+}
