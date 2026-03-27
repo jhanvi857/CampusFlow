@@ -53,6 +53,37 @@ public class DataStore {
             "11:00",
             "12:40"
         ));
+
+        sessions.add(new Session(
+            "4",
+            "CS102",
+            "Osperating System",
+            "Dr. Ritu Patel",
+            "Room 103",
+            "CSE",
+            "Lab",
+            "",
+            "A1",
+            "Monday",
+            "11:00",
+            "12:40"
+        ));
+
+        sessions.add(new Session(
+            "3",
+            "CS102",
+            "Data Communication and Computer Netwroks",
+            "Dr. Mani Shekhar Gupta",
+            "Room 104",
+            "CSE",
+            "Lab",
+            "",
+            "A3",
+            "Monday",
+            "11:00",
+            "12:40"
+        ));
+
         return sessions;
     }
 }
