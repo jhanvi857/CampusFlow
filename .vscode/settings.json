@@ -1,0 +1,10 @@
+{
+  "java.project.sourcePaths": [
+    "server"
+  ],
+  "java.project.referencedLibraries": [
+    "server/nioflow-framework-1.0.0.jar",
+    "server/lib/*.jar"
+  ],
+  "css.lint.unknownAtRules": "ignore"
+}
