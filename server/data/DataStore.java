@@ -352,6 +352,105 @@ public class DataStore {
             "13:30",
             "15:10"
         ));
+        //Friday TimeTable CSE A
+        sessions.add(new Session(
+            "1",
+            "ECSCI24203",
+            "Operating System",
+            "Dr. Hitesh Chhinkaniwala",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Friday",
+            "09:10",
+            "10:00"
+        ));
+        sessions.add(new Session(
+            "2",
+            "ECSCI24203",
+            "Data Communication and Computer Networks",
+            "Dr. Mani Shekhar Gupta",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Friday",
+            "10:00",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "3",
+            "EPDAJ24201",
+            "Career Development Cell",
+            "",
+            "Room 203",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Friday",
+            "11:00",
+            "11:50"
+        ));
+        sessions.add(new Session(
+            "4",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Dr. Tejas Modi",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Friday",
+            "12:40",
+            "13:30"
+        ));
+        sessions.add(new Session(
+            "5",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Ms. Nidhi Acharya",
+            "Lab 203",
+            "CSE",
+            "Lab",
+            "",
+            "A1",
+            "Friday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "5",
+            "EICCI24203",
+            "Data Communication and Communication Networks",
+            "Dr. Mani Shekhar Gupta",
+            "Lab 201",
+            "CSE",
+            "Lab",
+            "",
+            "A2",
+            "Friday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "5",
+            "ECSCI24203",
+            "Operating System",
+            "Dr. Anubhava Shrivastava",
+            "Lab 403",
+            "CSE",
+            "Lab",
+            "",
+            "A3",
+            "Friday",
+            "13:30",
+            "15:10"
+        ));
         return sessions;
     }
 }
