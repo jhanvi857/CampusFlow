@@ -17,7 +17,7 @@ function ScheduleRequestForm({ onRequest }) {
         <h2 className="text-2xl font-extrabold tracking-tight text-slate-800">
           <span className="bg-gradient-to-r from-honolulu-500 to-amethyst-500 bg-clip-text text-transparent">Request</span> Extra/Reschedule Slot
         </h2>
-        <p className="mt-1 text-sm text-slate-400">Enter complete session details to check availability, book if free, or get alternatives.</p>
+        <p className="mt-1 text-sm text-slate-400">Enter session details to check availability. College hours: 09:00 AM to 05:00 PM.</p>
       </div>
 
       <form onSubmit={submitRequest} className="grid gap-4 md:grid-cols-2">
@@ -34,8 +34,8 @@ function ScheduleRequestForm({ onRequest }) {
         <label className="space-y-1.5 text-sm font-medium text-slate-600">Room / Lab<input name="venue" value={formData.venue} onChange={updateField} required className="input-glass" placeholder="e.g. Lab-3" /></label>
         <label className="space-y-1.5 text-sm font-medium text-slate-600">Day<select name="day" value={formData.day} onChange={updateField} className="input-glass">{WEEK_DAYS.map(d => <option key={d} value={d}>{d}</option>)}</select></label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="space-y-1.5 text-sm font-medium text-slate-600">Start Time<input type="time" name="startTime" value={formData.startTime} onChange={updateField} required className="input-glass" /></label>
-          <label className="space-y-1.5 text-sm font-medium text-slate-600">End Time<input type="time" name="endTime" value={formData.endTime} onChange={updateField} required className="input-glass" /></label>
+          <label className="space-y-1.5 text-sm font-medium text-slate-600">Start Time<input type="time" name="startTime" value={formData.startTime} onChange={updateField} min="09:00" max="17:00" required className="input-glass" /></label>
+          <label className="space-y-1.5 text-sm font-medium text-slate-600">End Time<input type="time" name="endTime" value={formData.endTime} onChange={updateField} min="09:00" max="17:00" required className="input-glass" /></label>
         </div>
         <div className="md:col-span-2 flex flex-wrap gap-3 pt-2">
           <button type="submit" className="btn-brand">Check & Book Slot</button>
