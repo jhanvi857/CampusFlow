@@ -833,6 +833,425 @@ public class DataStore {
                 "Fri",
                 "12:40",
                 "14:20"));
+        // Monday CSE C
+        sessions.add(new Session(
+                "S63",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Dipti Trivedi",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Mon",
+                "09:10",
+                "10:00"));
+        sessions.add(new Session(
+                "S64",
+                "ECSCI24204",
+                "Operating System",
+                "Prof. (Dr.) Hitesh Chhinkaniwala",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Mon",
+                "10:00",
+                "10:50"));
+        // Parallel Morning Labs
+        sessions.add(new Session(
+                "S65",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Dipti Trivedi",
+                "Lab 2B",
+                "CSE",
+                "Lab",
+                "",
+                "C3",
+                "Mon",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S66",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Dipti Trivedi", // Assuming DP refers to Dr. Dipti Trivedi based on the legend
+                "Lab 4A",
+                "CSE",
+                "Lab",
+                "",
+                "C2",
+                "Mon",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S67",
+                "ECSCI24204",
+                "Operating System",
+                "Ms. Nidhi Acharya",
+                "Lab 4B",
+                "CSE",
+                "Lab",
+                "",
+                "C1",
+                "Mon",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S68",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Sougata Mandal",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Mon",
+                "13:30",
+                "14:20"));
+        
+
+        // Tuesday CSE C
+        sessions.add(new Session(
+                "S69",
+                "ECSCI24204",
+                "Operating System",
+                "Prof. (Dr.) Hitesh Chhinkaniwala",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Tue",
+                "09:10",
+                "10:00"));
+        sessions.add(new Session(
+                "S70",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Sougata Mandal",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Tue",
+                "10:00",
+                "10:50"));
+        // Parallel Morning Labs
+        sessions.add(new Session(
+                "S71",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Dipti Trivedi",
+                "Lab 2B",
+                "CSE",
+                "Lab",
+                "",
+                "C1",
+                "Tue",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S72",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Lab 2C",
+                "CSE",
+                "Lab",
+                "",
+                "C3",
+                "Tue",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S73",
+                "ECSCI24204",
+                "Operating System",
+                "Ms. Nidhi Acharya",
+                "Lab 4C",
+                "CSE",
+                "Lab",
+                "",
+                "C2",
+                "Tue",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S74",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Tue",
+                "13:30",
+                "14:20"));
+        sessions.add(new Session(
+                "S75",
+                "EMSAT24201",
+                "Engineering Economics",
+                "Dr. Jignesh Thaker",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Mon",
+                "14:20",
+                "15:10"));
+
+        // Wednesday CSE C
+        sessions.add(new Session(
+                "S76",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Sougata Mandal",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Wed",
+                "09:10",
+                "10:00"));
+        sessions.add(new Session(
+                "S77",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Wed",
+                "10:00",
+                "10:50"));
+        sessions.add(new Session(
+                "S78",
+                "ECSCI24204",
+                "Operating System",
+                "Prof. (Dr.) Hitesh Chhinkaniwala",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Wed",
+                "11:00",
+                "11:50"));
+        sessions.add(new Session(
+                "S79",
+                "EMSAT24201",
+                "Engineering Economics",
+                "Dr. Jignesh Thaker",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Wed",
+                "11:50",
+                "12:40"));
+        sessions.add(new Session(
+                "S80",
+                "EMABT24202", // Kept course code consistent with your previous CDC entry
+                "Carrier Development Cell",
+                "",
+                "Room 203",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Wed",
+                "13:30",
+                "14:20"));
+
+        // Thursday CSE C
+        sessions.add(new Session(
+                "S81",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Dipti Trivedi",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Thu",
+                "09:10",
+                "10:00"));
+        sessions.add(new Session(
+                "S82",
+                "ECSCI24204",
+                "Operating System",
+                "Prof. (Dr.) Hitesh Chhinkaniwala",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Thu",
+                "10:00",
+                "10:50"));
+        // Parallel Morning Tutorial/Labs
+        sessions.add(new Session(
+                "S83",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Mr. Mitesh Bhavsar",
+                "Room 202",
+                "CSE",
+                "Tutorial",
+                "",
+                "C1",
+                "Thu",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S84",
+                "EICCI24204",
+                "Ideation and Conceptualization",
+                "Dr. Alok Kumar Singh",
+                "Room 203",
+                "CSE",
+                "Lab",
+                "",
+                "C2",
+                "Thu",
+                "11:00",
+                "12:40"));
+        // Parallel Afternoon Tutorial/Labs
+        sessions.add(new Session(
+                "S85",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Mr. Mitesh Bhavsar",
+                "Room 202",
+                "CSE",
+                "Tutorial",
+                "",
+                "C3",
+                "Thu",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S86",
+                "EICCI24204",
+                "Ideation and Conceptualization",
+                "Dr. Alok Kumar Singh",
+                "Lab",
+                "CSE",
+                "Lab",
+                "",
+                "C1",
+                "Thu",
+                "13:30",
+                "15:10"));
+
+        // Friday CSE C
+        sessions.add(new Session(
+                "S87",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Dipti Trivedi",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Fri",
+                "09:10",
+                "10:00"));
+        sessions.add(new Session(
+                "S88",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Room 302",
+                "CSE",
+                "Lecture",
+                "C",
+                "",
+                "Fri",
+                "10:00",
+                "10:50"));
+        // Parallel Morning Labs
+        sessions.add(new Session(
+                "S89",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Dipti Trivedi",
+                "Lab 2B",
+                "CSE",
+                "Lab",
+                "",
+                "C2",
+                "Fri",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S90",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Lab 2A",
+                "CSE",
+                "Lab",
+                "",
+                "C1",
+                "Fri",
+                "11:00",
+                "12:40"));
+        sessions.add(new Session(
+                "S91",
+                "ECSCI24204",
+                "Operating System",
+                "Ms. Nidhi Acharya",
+                "Lab 4C",
+                "CSE",
+                "Lab",
+                "",
+                "C3",
+                "Fri",
+                "11:00",
+                "12:40"));
+        // Parallel Afternoon Tutorial/Labs
+        sessions.add(new Session(
+                "S92",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Mr. Mitesh Bhavsar",
+                "Room 202",
+                "CSE",
+                "Tutorial",
+                "",
+                "C2",
+                "Fri",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S93",
+                "EICCI24204",
+                "Ideation and Conceptualization",
+                "Dr. Alok Kumar Singh",
+                "Lab",
+                "CSE",
+                "Lab",
+                "",
+                "C3",
+                "Fri",
+                "13:30",
+                "15:10"));
         return sessions;
     }
 }
