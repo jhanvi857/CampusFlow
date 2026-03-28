@@ -90,8 +90,13 @@ function GraphPlayground() {
     const e = []; const all = [...sessions, candidateSession];
     for (let i = 0; i < all.length; i++) {
       for (let j = i + 1; j < all.length; j++) {
-        if (all[i].subjectCode && all[i].subjectCode === all[j].subjectCode && all[i].className === all[j].className) {
-          e.push({ left: String(all[i].id || 'REQ'), right: String(all[j].id || 'REQ'), kind: 'structural', type: 'structural' })
+        const s1 = all[i], s2 = all[j];
+        // Connect same class + section (e.g. CSE A nodes should stick together)
+        const sameGroup = isSameText(s1.className, s2.className) && 
+                          (isSameText(s1.section, s2.section) || (!s1.section && !s2.section));
+        
+        if (sameGroup) {
+          e.push({ left: String(s1.id || 'REQ'), right: String(s2.id || 'REQ'), kind: 'structural', type: 'structural' })
         }
       }
     }
@@ -100,10 +105,25 @@ function GraphPlayground() {
 
   const nodes = useMemo(() => [...baseNodes, { id: 'REQ', session: candidateSession }], [baseNodes, candidateSession])
   const edges = useMemo(() => {
-     const visBase = baseEdges.slice(0, visibleBaseEdges)
-     const visCand = candidateEdges.slice(0, visibleCandidateEdges)
+     const visBase = baseEdges.slice(0, visibleBaseEdges).map(e => ({ ...e, type: 'conflict' }))
+     const visCand = candidateEdges.slice(0, visibleCandidateEdges).map(e => ({ ...e, type: 'conflict' }))
      return [...visBase, ...visCand, ...structuralEdges]
   }, [baseEdges, visibleBaseEdges, candidateEdges, visibleCandidateEdges, structuralEdges])
+
+  const groupCenters = useMemo(() => {
+    const width = 1600; const height = 1200;
+    const groups = [...new Set(nodes.map(n => (n.session.className || 'Other') + (n.session.section || '')))];
+    const centers = {};
+    groups.forEach((g, i) => {
+      const angle = (i / groups.length) * 2 * Math.PI;
+      centers[g] = { 
+        x: width / 2 + Math.cos(angle) * 450, 
+        y: height / 2 + Math.sin(angle) * 380,
+        label: g.toUpperCase()
+      };
+    });
+    return centers;
+  }, [nodes])
 
   const cycleEdgeSet = useMemo(() => { if (!cycleResult?.cyclePath?.length) return new Set(); const s = new Set(); for (let i = 0; i < cycleResult.cyclePath.length - 1; i++) s.add([cycleResult.cyclePath[i], cycleResult.cyclePath[i + 1]].sort().join('|')); return s }, [cycleResult])
 
@@ -130,20 +150,27 @@ function GraphPlayground() {
   useEffect(() => {
     if (!nodes.length) return
 
-    const width = 1000
-    const height = 800
+    const width = 1600
+    const height = 1200
     
     // Initialize nodes for D3
-    const d3Nodes = nodes.map(n => ({ ...n }))
-    const d3Edges = edges.map(e => ({ source: e.left, target: e.right, kind: e.kind, reasons: e.reasons }))
+
+    // Initialize nodes for D3
+    const d3Nodes = nodes.map(n => {
+      const gKey = (n.session.className || 'Other') + (n.session.section || '');
+      return { ...n, group: gKey };
+    });
+    const d3Edges = edges.map(e => ({ source: e.left, target: e.right, kind: e.kind, reasons: e.reasons, type: e.type }));
 
     const simulation = d3Force.forceSimulation(d3Nodes)
-      .force("link", d3Force.forceLink(d3Edges).id(d => d.id).distance(d => d.type === 'conflict' ? 380 : 250))
-      .force("charge", d3Force.forceManyBody().strength(-3500))
+      .force("link", d3Force.forceLink(d3Edges).id(d => d.id).distance(d => d.type === 'conflict' ? 500 : 250).strength(d => d.type === 'structural' ? 0.35 : 0.05))
+      .force("charge", d3Force.forceManyBody().strength(-6000))
       .force("center", d3Force.forceCenter(width / 2, height / 2))
+      .force("x", d3Force.forceX().x(d => groupCenters[d.group]?.x || width / 2).strength(0.35))
+      .force("y", d3Force.forceY().y(d => groupCenters[d.group]?.y || height / 2).strength(0.35))
       .force("collision", d3Force.forceCollide().radius(180))
-      .alphaDecay(0.015)
-      .velocityDecay(0.4)
+      .alphaDecay(0.008) // Very slow decay for super-stable movement
+      .velocityDecay(0.75) // Heavy friction to stop 'dancing'
       .on("tick", () => {
         const newPos = {}
         d3Nodes.forEach(n => {
@@ -186,19 +213,37 @@ function GraphPlayground() {
 
   async function runSimulation() {
     if (loading || !!error) return
-    setPhase('build'); setTraceLogs(['Loading existing conflict edges...']); setCycleResult(null); setActiveScanId('')
-    setVisibleBaseEdges(0); for (let i = 1; i <= baseEdges.length; i++) { setVisibleBaseEdges(i); await sleep(90) }
-    setPhase('scan'); setTraceLogs(p => [...p, 'Scanning existing sessions against request node REQ...'])
-    for (const s of sessions) { const r = analyzeConflict(candidateSession, s, bufferMinutes); setActiveScanId(String(s.id)); await sleep(260); setTraceLogs(p => [...p, r.reasons.length ? `Conflict with ${s.id} -> ${r.reasons.join(', ')}` : `No conflict with ${s.id}`]) }
-    if (!candidateConflicts.length) setTraceLogs(p => [...p, 'No conflicts found.'])
-    setActiveScanId(''); setPhase('link'); setTraceLogs(p => [...p, 'Creating request conflict edges...'])
-    setVisibleCandidateEdges(0); for (let i = 1; i <= candidateEdges.length; i++) { setVisibleCandidateEdges(i); await sleep(140) }
-    setPhase('cycle'); setTraceLogs(p => [...p, 'Running DFS cycle detection...'])
+    setPhase('build'); setTraceLogs(['Initializing nodes for every academic session...']); setCycleResult(null); setActiveScanId('')
+    setVisibleBaseEdges(0); for (let i = 1; i <= baseEdges.length; i++) { setVisibleBaseEdges(i); await sleep(120) }
+    
+    setPhase('scan'); setTraceLogs(p => [...p, 'Sequential scan for overlaps against Request Node (REQ)...'])
+    for (const s of sessions) { 
+      const r = analyzeConflict(candidateSession, s, bufferMinutes); 
+      setActiveScanId(String(s.id)); 
+      await sleep(400); // Slowed down scan for user followability
+      if (r.reasons.length) setTraceLogs(p => [...p, `Found logical clash with ${s.id}: ${r.reasons.join(' + ')}`]) 
+    }
+    
+    if (!candidateConflicts.length) setTraceLogs(p => [...p, 'No conflicts detected for the current time slot.'])
+    setActiveScanId(''); 
+    
+    setPhase('link'); setTraceLogs(p => [...p, 'Visualizing conflict paths (High-strength undirected edges)...'])
+    setVisibleCandidateEdges(0); for (let i = 1; i <= candidateEdges.length; i++) { setVisibleCandidateEdges(i); await sleep(300) }
+    
+    setPhase('cycle'); setTraceLogs(p => [...p, 'Executing Cycle Detection (DFS Traversal)...'])
+    await sleep(800)
     const result = detectCycle(nodes, [...baseEdges, ...candidateEdges])
     setCycleResult(result); setTraceLogs(p => [...p, ...result.logs]); setPhase('done')
   }
 
-  function resetVisual() { setVisibleBaseEdges(baseEdges.length); setVisibleCandidateEdges(candidateEdges.length); setActiveScanId(''); setTraceLogs([]); setCycleResult(null); setPhase('idle') }
+  function resetVisual() { 
+    setVisibleBaseEdges(baseEdges.length); 
+    setVisibleCandidateEdges(candidateEdges.length); 
+    setActiveScanId(''); 
+    setTraceLogs(['Visual reset complete. Data re-summarized.']); 
+    setCycleResult(null); 
+    setPhase('idle') 
+  }
 
   const stats = useMemo(() => ({ sessions: sessions.length, baseEdges: baseEdges.length, candidateEdges: candidateEdges.length, candidateConflicts: candidateConflicts.length }), [baseEdges.length, candidateConflicts.length, candidateEdges.length, sessions.length])
 
@@ -272,16 +317,23 @@ function GraphPlayground() {
           {!!error && <p className="p-8 text-sm font-medium text-red-500">{error}</p>}
 
           {!loading && !error && (
-            <svg ref={svgRef} viewBox="0 0 1000 800" className="h-[800px] w-full cursor-move" role="img" aria-label="Real graph lab">
+            <svg ref={svgRef} viewBox="0 0 1600 1200" className="h-[900px] w-full cursor-move bg-slate-50/50" role="img" aria-label="Real graph lab">
               <defs>
                 <linearGradient id="lecNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#0EA5E9" /><stop offset="100%" stopColor="#0369A1" /></linearGradient>
                 <linearGradient id="labNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
                 <linearGradient id="tutNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#6D28D9" /></linearGradient>
                 <linearGradient id="reqNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#059669" /></linearGradient>
-                <filter id="labNodeGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                <filter id="labNodeGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
               </defs>
-
+              
               <g ref={gRef}>
+                {Object.entries(groupCenters || {}).map(([key, center]) => (
+                  <g key={`group-label-${key}`}>
+                    <circle cx={center.x} cy={center.y} r="350" fill="none" stroke="#E2E8F0" strokeWidth="2" strokeDasharray="10 10" opacity="0.3" />
+                    <text x={center.x} y={center.y - 370} textAnchor="middle" fill="#94A3B8" className="text-[24px] font-black uppercase tracking-[0.2em]">{center.label}</text>
+                  </g>
+                ))}
+
                 {edges.map((edge, i) => {
                   const from = nodePositions[edge.left], to = nodePositions[edge.right]
                   if (!from || !to) return null
@@ -290,10 +342,10 @@ function GraphPlayground() {
                     <line 
                       key={`${edge.left}-${edge.right}-${edge.kind}-${i}`} 
                       x1={from.x} y1={from.y} x2={to.x} y2={to.y} 
-                      stroke={isCycle ? '#EF4444' : isConf ? edgeColorForReasons(edge.reasons) : '#E2E8F0'} 
-                      strokeWidth={isConf ? "4" : "1.5"} 
-                      strokeDasharray={isConf ? "0" : "6 4"}
-                      opacity="0.6" 
+                      stroke={isCycle ? '#EF4444' : isConf ? edgeColorForReasons(edge.reasons) : '#CBD5E1'} 
+                      strokeWidth={isConf ? "8" : "3"} 
+                      strokeDasharray={isConf ? "0" : "8 5"}
+                      opacity={isConf ? "0.9" : "0.2"} 
                     />
                   )
                 })}
@@ -304,18 +356,18 @@ function GraphPlayground() {
                   const sType = node.session?.sessionType?.toLowerCase() || 'lecture'
                   const grad = inCycle ? '#EF4444' : isReq ? 'url(#reqNodeGrad)' : sType === 'lab' ? 'url(#labNodeGrad)' : sType === 'tutorial' ? 'url(#tutNodeGrad)' : 'url(#lecNodeGrad)'
                   
-                  const sLabel = isReq ? 'Requested Slot' : truncateLabel(node.session.subjectName || 'Session', 18)
-                  const rLabel = isReq ? `${node.session.room || 'Room TBD'} | ${node.session.day || ''} ${node.session.startTime || ''}-${node.session.endTime || ''}` : node.session.room || 'Room TBD'
-                  const rSize = isReq ? 70 : 55
+                  const sLabel = isReq ? 'REQUEST SLOT' : truncateLabel(node.session.subjectName || 'Session', 20).toUpperCase()
+                  const rLabel = isReq ? `${node.session.room} | ${node.session.day} ${node.session.startTime}` : `${node.session.room} | ${node.session.section ||'N/A'}${node.session.batch || ''}`
+                  const rSize = isReq ? 95 : 80
                   return (
                     <g key={node.id} filter="url(#labNodeGlow)" className="node-group transition-transform duration-300">
-                      <circle cx={pos.x} cy={pos.y} r={rSize} fill={grad} stroke={isAS ? '#F59E0B' : '#E2E8F0'} strokeWidth={isAS ? 8 : 2} />
-                      <text x={pos.x} y={pos.y + 2} textAnchor="middle" fill="#fff" className="text-[14px] font-black">{isReq ? 'REQ' : sType.slice(0, 3).toUpperCase()}</text>
+                      <circle cx={pos.x} cy={pos.y} r={rSize} fill={grad} stroke={isAS ? '#F59E0B' : '#FFFFFF'} strokeWidth={isAS ? 14 : 5} />
+                      <text x={pos.x} y={pos.y + 7} textAnchor="middle" fill="#fff" className="text-[20px] font-black pointer-events-none tracking-wider">{isReq ? 'REQ' : sType.slice(0, 3).toUpperCase()}</text>
                       
-                      <g className={`transition-opacity duration-300 ${isStable || isAS ? 'opacity-100' : 'opacity-60'}`}>
-                        <text x={pos.x} y={pos.y + rSize + 25} textAnchor="middle" fill="#1E293B" className="text-[14px] font-black">{sLabel}</text>
-                        <text x={pos.x} y={pos.y + rSize + 42} textAnchor="middle" fill="#64748B" className="text-[12px] font-bold" opacity="0.8">{truncateLabel(rLabel, 50)}</text>
-                        <text x={pos.x} y={pos.y + rSize + 58} textAnchor="middle" fill="#94A3B8" className="text-[10px] font-medium">{node.id}</text>
+                      <g className="pointer-events-none">
+                        <text x={pos.x} y={pos.y + rSize + 32} textAnchor="middle" fill="#0F172A" className="text-[19px] font-black tracking-tight uppercase">{sLabel}</text>
+                        <text x={pos.x} y={pos.y + rSize + 55} textAnchor="middle" fill="#475569" className="text-[16px] font-bold" opacity="0.9">{rLabel}</text>
+                        <text x={pos.x} y={pos.y + rSize + 76} textAnchor="middle" fill="#94A3B8" className="text-[13px] font-mono font-bold tracking-[0.1em]">{node.id}</text>
                       </g>
                     </g>
                   )

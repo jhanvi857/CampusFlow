@@ -10,6 +10,8 @@ function uniqueNodes(conflicts = {}) {
   return [...new Set([...sourceNodes, ...targetNodes])]
 }
 
+function truncateLabel(v, max = 26) { return !v ? '' : v.length > max ? `${v.slice(0, max - 1)}...` : v }
+
 function ConflictGraph({ conflicts, sessions = [] }) {
   const sessionDataMap = useMemo(() => 
     sessions.reduce((acc, s) => { acc[String(s.id)] = s; return acc }, {}),
@@ -30,12 +32,12 @@ function ConflictGraph({ conflicts, sessions = [] }) {
   const structuralEdges = useMemo(() => {
     const edges = []
     for (let i = 0; i < nodesArr.length; i++) {
-      for (let j = i + 1; j < nodesArr.length; j++) {
-        const s1 = nodesArr[i].session, s2 = nodesArr[j].session
-        if (s1.subjectCode && s1.subjectCode === s2.subjectCode && s1.className === s2.className) {
-          edges.push({ source: nodesArr[i].id, target: nodesArr[j].id, type: 'structural' })
+        for (let j = i + 1; j < nodesArr.length; j++) {
+            const s1 = nodesArr[i].session, s2 = nodesArr[j].session
+            if (s1.subjectCode && s1.subjectCode === s2.subjectCode && s1.className === s2.className) {
+                edges.push({ source: nodesArr[i].id, target: nodesArr[j].id, type: 'structural' })
+            }
         }
-      }
     }
     return edges
   }, [nodesArr])
@@ -48,19 +50,19 @@ function ConflictGraph({ conflicts, sessions = [] }) {
   const svgRef = useRef(null)
   const gRef = useRef(null)
   
-  const width = 1200
-  const height = 900 // Increased height
+  const width = 1400
+  const height = 1000
 
   useEffect(() => {
     if (!nodesArr.length) return
 
     const simulation = d3Force.forceSimulation(nodesArr)
-      .force("link", d3Force.forceLink(allEdgesArr).id(d => d.id).distance(d => d.type === 'conflict' ? 380 : 250))
-      .force("charge", d3Force.forceManyBody().strength(-3000))
+      .force("link", d3Force.forceLink(allEdgesArr).id(d => d.id).distance(d => d.type === 'conflict' ? 450 : 250))
+      .force("charge", d3Force.forceManyBody().strength(-5000))
       .force("center", d3Force.forceCenter(width / 2, height / 2))
       .force("collision", d3Force.forceCollide().radius(180))
-      .alphaDecay(0.015)
-      .velocityDecay(0.4)
+      .alphaDecay(0.01)
+      .velocityDecay(0.6)
       .on("tick", () => {
         const newPos = {}
         nodesArr.forEach(node => {
@@ -142,8 +144,8 @@ function ConflictGraph({ conflicts, sessions = [] }) {
           <linearGradient id="tutNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#6D28D9" /></linearGradient>
 
           <filter id="nodeShadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur in="SourceAlpha" stdDeviation="8" />
-            <feOffset dx="0" dy="10" result="offsetblur" />
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
+            <feOffset dx="0" dy="8" result="offsetblur" />
             <feComponentTransfer><feFuncA type="linear" slope="0.15"/></feComponentTransfer>
             <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
@@ -159,11 +161,11 @@ function ConflictGraph({ conflicts, sessions = [] }) {
               <line 
                 key={`edge-${i}`} 
                 x1={s.x} y1={s.y} x2={t.x} y2={t.y} 
-                stroke={isConf ? 'url(#conflictGrad)' : '#E2E8F0'} 
-                strokeWidth={isConf ? "4" : "1.5"} 
-                strokeDasharray={isConf ? "0" : "6 4"}
+                stroke={isConf ? 'url(#conflictGrad)' : '#CBD5E1'} 
+                strokeWidth={isConf ? "6" : "2.5"} 
+                strokeDasharray={isConf ? "0" : "8 5"}
                 strokeLinecap="round"
-                opacity={isConf ? "0.4" : "0.3"} 
+                opacity={isConf ? "0.6" : "0.3"} 
               />
             )
           })}
@@ -171,7 +173,7 @@ function ConflictGraph({ conflicts, sessions = [] }) {
           {nodesArr.map(node => {
             const p = positions[node.id]
             if (!p) return null
-            const size = Math.min(90, 70 + (degreeMap[node.id] || 0) * 6)
+            const size = Math.min(100, 80 + (degreeMap[node.id] || 0) * 8)
             const type = (node.session?.sessionType || 'lecture').toLowerCase()
             const grad = type === 'lab' ? 'url(#labNodeGrad)' : type === 'tutorial' ? 'url(#tutNodeGrad)' : 'url(#lecNodeGrad)'
             
@@ -184,46 +186,47 @@ function ConflictGraph({ conflicts, sessions = [] }) {
                 onMouseLeave={() => setHoveredNode(null)}
               >
                 <circle 
-                  cx={p.x} cy={p.y} r={size + 20} 
+                  cx={p.x} cy={p.y} r={size + 25} 
                   fill="none" stroke={type === 'lab' ? '#F59E0B' : '#0EA5E9'} 
-                  strokeWidth="2" strokeDasharray="8 4" opacity="0.1"
-                  className="animate-[spin_20s_linear_infinite]"
+                  strokeWidth="2" strokeDasharray="10 5" opacity="0.1"
+                  className="animate-[spin_30s_linear_infinite]"
                 />
                 <circle 
                   cx={p.x} cy={p.y} r={size} 
                   fill={grad} 
-                  className="transition-all duration-500 group-hover/node:scale-110 shadow-lg"
+                  stroke="#FFFFFF" strokeWidth="4"
+                  className="transition-all duration-500 group-hover/node:scale-105"
                 />
                 <text 
-                  x={p.x} y={p.y + 2} 
+                  x={p.x} y={p.y + 6} 
                   textAnchor="middle" 
-                  className="pointer-events-none select-none text-[16px] font-black" 
+                  className="pointer-events-none select-none text-[20px] font-black" 
                   fill="#fff"
                 >
                   {type.slice(0, 3).toUpperCase()}
                 </text>
                 
-                <g className={`transition-opacity duration-300 ${hoveredNode?.id === node.id || isStable ? 'opacity-100' : 'opacity-60'}`}>
+                <g className={`transition-opacity duration-300 ${hoveredNode?.id === node.id || isStable ? 'opacity-100' : 'opacity-80'}`}>
                   <text 
-                    x={p.x} y={p.y + size + 30} 
+                    x={p.x} y={p.y + size + 35} 
                     textAnchor="middle" 
-                    className="pointer-events-none select-none text-[15px] font-black fill-slate-800"
+                    className="pointer-events-none select-none text-[18px] font-black fill-slate-900 tracking-tight"
                   >
-                    {node.session?.subjectName ? truncateLabel(node.session.subjectName, 18) : node.id}
+                    {node.session?.subjectName ? truncateLabel(node.session.subjectName, 20).toUpperCase() : node.id}
                   </text>
                   <text 
-                    x={p.x} y={p.y + size + 50} 
+                    x={p.x} y={p.y + size + 58} 
                     textAnchor="middle" 
-                    className="pointer-events-none select-none text-[13px] font-bold fill-honolulu-600"
+                    className="pointer-events-none select-none text-[15px] font-bold fill-honolulu-600"
                   >
                     {node.session?.day || ''} • {node.session?.startTime || ''}
                   </text>
                   <text 
-                    x={p.x} y={p.y + size + 66} 
+                    x={p.x} y={p.y + size + 78} 
                     textAnchor="middle" 
-                    className="pointer-events-none select-none text-[11px] font-medium fill-slate-400"
+                    className="pointer-events-none select-none text-[12px] font-bold fill-slate-400"
                   >
-                    {node.session?.room || 'TBD'}
+                    {node.session?.room || 'LOCATION TBD'}
                   </text>
                 </g>
               </g>
