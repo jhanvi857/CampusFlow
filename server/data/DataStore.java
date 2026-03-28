@@ -538,6 +538,106 @@ public class DataStore {
             "14:20",
             "15:10"
         ));
+        //Tuesday CSE B TimeTable
+        sessions.add(new Session(
+            "1",
+            "EICCI24203",
+            "Data Communication and Computer Networks",
+            "Dr. Mani Shekhar Gupta",
+            "Lab 201",
+            "CSE",
+            "Lab",
+            "",
+            "B1",
+            "Tuesdayday",
+            "09:10",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "1",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Dr. Tejas Modi",
+            "LAb 203",
+            "CSE",
+            "Lab",
+            "",
+            "B3",
+            "Tuesday",
+            "09:10",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "1",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Ritu Pate",
+            "Lab 403",
+            "CSE",
+            "Lab",
+            "",
+            "B2",
+            "Tuesday",
+            "09:10",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "2",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Hitesh Chhinkaniwala",
+            "Room 304",
+            "CSE",
+            "Lecture",
+            "B",
+            "",
+            "Tuesday",
+            "11:00",
+            "11:50"
+        ));
+        sessions.add(new Session(
+            "3",
+            "EMABT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Ashlesha Bhise",
+            "Room 304",
+            "CSE",
+            "Lecture",
+            "B",
+            "",
+            "Tuesday",
+            "12:40",
+            "13:30"
+        ));
+        sessions.add(new Session(
+            "4",
+            "EMABT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Sougata Mandal",
+            "Room 304",
+            "CSE",
+            "Tutorial",
+            "",
+            "B1",
+            "Tuesday",
+            "13:30",
+            "15:10"
+        )); 
+        sessions.add(new Session(
+            "4",
+            "ECSAJ24204",
+            "Ideation and Conceptualization",
+            "Dr. Mihir Velani",
+            "Room 303B",
+            "CSE",
+            "Lab",
+            "",
+            "B2",
+            "Tuesday",
+            "13:30",
+            "15:10"
+        ));
+        //Wednesday Time Table CSE B     
         return sessions;
     }
 }
