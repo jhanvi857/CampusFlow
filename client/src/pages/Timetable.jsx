@@ -6,189 +6,19 @@ import { getTimetable } from '../services/api'
 const BOOKED_SESSION_STORAGE_KEY = 'campusflow-booked-sessions'
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-function toMinutes(timeValue) {
-  if (!timeValue || !timeValue.includes(':')) {
-    return null
-  }
+function toMinutes(t){if(!t||!t.includes(':'))return null;const[h,m]=t.split(':');const hh=Number(h),mm=Number(m);return Number.isNaN(hh)||Number.isNaN(mm)?null:hh*60+mm}
+function toTimeLabel(m){return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
+function parseLegacy(r){if(!r||typeof r!=='string')return null;const n=r.trim();const m=n.match(/^([A-Za-z]{3})-(\d{1,2})(AM|PM)$/i);if(!m)return null;let h=Number(m[2]);const s=m[3].toUpperCase();if(s==='PM'&&h!==12)h+=12;if(s==='AM'&&h===12)h=0;return{day:m[1],start:h*60,end:h*60+60}}
+function getSessionWindow(s){const d=s.day,st=toMinutes(s.startTime),en=toMinutes(s.endTime);if(d&&st!==null&&en!==null)return{day:d,start:st,end:en};return parseLegacy(s.time)}
+function sessionsOverlap(a,b){return a.start<b.end&&b.start<a.end}
+function isSameText(a,b){return!a||!b?false:String(a).trim().toLowerCase()===String(b).trim().toLowerCase()}
+function toBookableSession(f){return{id:`CF-${Date.now()}`,subjectName:f.subjectName,subjectCode:f.subjectName,courseCode:f.subjectName,faculty:f.faculty,room:f.venue,className:f.className,section:f.section,batch:f.batch,sessionType:f.sessionType,requestType:f.requestType,day:f.day,startTime:f.startTime,endTime:f.endTime,time:`${f.day} ${f.startTime}-${f.endTime}`}}
 
-  const [hourText, minuteText] = timeValue.split(':')
-  const hour = Number(hourText)
-  const minute = Number(minuteText)
+function findConflicts(c,all){const w=getSessionWindow(c);if(!w)return[];return all.filter(s=>{const e=getSessionWindow(s);if(!e||e.day!==w.day||!sessionsOverlap(w,e))return false;return isSameText(c.room,s.room)||isSameText(c.faculty,s.faculty)||(isSameText(c.className,s.className)&&isSameText(c.section,s.section))||(isSameText(c.className,s.className)&&isSameText(c.batch,s.batch))})}
 
-  if (Number.isNaN(hour) || Number.isNaN(minute)) {
-    return null
-  }
+function findAlternativeSlots(b,all){const bs=toMinutes(b.startTime),be=toMinutes(b.endTime);const dur=bs!==null&&be!==null&&be>bs?be-bs:60;const days=[b.day,...DAYS.filter(d=>d!==b.day)];const sug=[];for(const d of days){for(let s=480;s<=1080-dur;s+=60){const t={...b,day:d,startTime:toTimeLabel(s),endTime:toTimeLabel(s+dur)};if(!findConflicts(t,all).length)sug.push({day:d,startTime:t.startTime,endTime:t.endTime,venue:t.room});if(sug.length>=4)return sug}}return sug}
 
-  return hour * 60 + minute
-}
-
-function toTimeLabel(totalMinutes) {
-  const hour = Math.floor(totalMinutes / 60)
-  const minute = totalMinutes % 60
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
-}
-
-function parseLegacyTimeFormat(raw) {
-  if (!raw || typeof raw !== 'string') {
-    return null
-  }
-
-  const normalized = raw.trim()
-  const legacyMatch = normalized.match(/^([A-Za-z]{3})-(\d{1,2})(AM|PM)$/i)
-
-  if (!legacyMatch) {
-    return null
-  }
-
-  const day = legacyMatch[1]
-  let hour = Number(legacyMatch[2])
-  const suffix = legacyMatch[3].toUpperCase()
-
-  if (suffix === 'PM' && hour !== 12) {
-    hour += 12
-  }
-
-  if (suffix === 'AM' && hour === 12) {
-    hour = 0
-  }
-
-  const start = hour * 60
-  const end = start + 60
-
-  return {
-    day,
-    start,
-    end,
-  }
-}
-
-function getSessionWindow(session) {
-  const explicitDay = session.day
-  const explicitStart = toMinutes(session.startTime)
-  const explicitEnd = toMinutes(session.endTime)
-
-  if (explicitDay && explicitStart !== null && explicitEnd !== null) {
-    return {
-      day: explicitDay,
-      start: explicitStart,
-      end: explicitEnd,
-    }
-  }
-
-  return parseLegacyTimeFormat(session.time)
-}
-
-function sessionsOverlap(left, right) {
-  return left.start < right.end && right.start < left.end
-}
-
-function isSameText(left, right) {
-  if (!left || !right) {
-    return false
-  }
-
-  return String(left).trim().toLowerCase() === String(right).trim().toLowerCase()
-}
-
-function toBookableSession(formData) {
-  return {
-    id: `CF-${Date.now()}`,
-    subjectName: formData.subjectName,
-    subjectCode: formData.subjectName,
-    courseCode: formData.subjectName,
-    faculty: formData.faculty,
-    room: formData.venue,
-    className: formData.className,
-    section: formData.section,
-    batch: formData.batch,
-    sessionType: formData.sessionType,
-    requestType: formData.requestType,
-    day: formData.day,
-    startTime: formData.startTime,
-    endTime: formData.endTime,
-    time: `${formData.day} ${formData.startTime}-${formData.endTime}`,
-  }
-}
-
-function findConflicts(candidateSession, allSessions) {
-  const candidateWindow = getSessionWindow(candidateSession)
-
-  if (!candidateWindow) {
-    return []
-  }
-
-  return allSessions.filter((session) => {
-    const existingWindow = getSessionWindow(session)
-
-    if (!existingWindow || existingWindow.day !== candidateWindow.day) {
-      return false
-    }
-
-    if (!sessionsOverlap(candidateWindow, existingWindow)) {
-      return false
-    }
-
-    const roomConflict = isSameText(candidateSession.room, session.room)
-    const facultyConflict = isSameText(candidateSession.faculty, session.faculty)
-    const sameClass = isSameText(candidateSession.className, session.className)
-    const sectionConflict = sameClass && isSameText(candidateSession.section, session.section)
-    const batchConflict = sameClass && isSameText(candidateSession.batch, session.batch)
-
-    return roomConflict || facultyConflict || sectionConflict || batchConflict
-  })
-}
-
-function findAlternativeSlots(baseSession, allSessions) {
-  const baseStart = toMinutes(baseSession.startTime)
-  const baseEnd = toMinutes(baseSession.endTime)
-  const duration = baseStart !== null && baseEnd !== null && baseEnd > baseStart ? baseEnd - baseStart : 60
-  const orderedDays = [baseSession.day, ...DAYS.filter((day) => day !== baseSession.day)]
-  const suggestions = []
-
-  for (const day of orderedDays) {
-    for (let start = 8 * 60; start <= 18 * 60 - duration; start += 60) {
-      const tentative = {
-        ...baseSession,
-        day,
-        startTime: toTimeLabel(start),
-        endTime: toTimeLabel(start + duration),
-      }
-
-      const conflicts = findConflicts(tentative, allSessions)
-
-      if (!conflicts.length) {
-        suggestions.push({
-          day,
-          startTime: tentative.startTime,
-          endTime: tentative.endTime,
-          venue: tentative.room,
-        })
-      }
-
-      if (suggestions.length >= 4) {
-        return suggestions
-      }
-    }
-  }
-
-  return suggestions
-}
-
-function normalizeTimetablePayload(payload) {
-  if (Array.isArray(payload)) {
-    return payload
-  }
-
-  if (payload && Array.isArray(payload.sessions)) {
-    return payload.sessions
-  }
-
-  if (payload && typeof payload === 'object') {
-    return Object.values(payload)
-  }
-
-  return []
-}
+function normalizeTimetablePayload(p){if(Array.isArray(p))return p;if(p&&Array.isArray(p.sessions))return p.sessions;if(p&&typeof p==='object')return Object.values(p);return[]}
 
 function Timetable() {
   const [sessions, setSessions] = useState([])
@@ -199,236 +29,66 @@ function Timetable() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [dayFilter, setDayFilter] = useState('all')
 
-  useEffect(() => {
-    try {
-      const cached = localStorage.getItem(BOOKED_SESSION_STORAGE_KEY)
-      if (!cached) {
-        return
-      }
-
-      const parsed = JSON.parse(cached)
-      if (Array.isArray(parsed)) {
-        setBookedSessions(parsed)
-      }
-    } catch {
-      setBookedSessions([])
-    }
-  }, [])
-
-  useEffect(() => {
-    async function loadTimetable() {
-      try {
-        setLoading(true)
-        setError('')
-        const data = await getTimetable()
-        setSessions(normalizeTimetablePayload(data))
-      } catch (err) {
-        setError(err.message || 'Unable to load timetable data')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadTimetable()
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem(BOOKED_SESSION_STORAGE_KEY, JSON.stringify(bookedSessions))
-  }, [bookedSessions])
+  useEffect(() => { try { const c = localStorage.getItem(BOOKED_SESSION_STORAGE_KEY); if (!c) return; const p = JSON.parse(c); if (Array.isArray(p)) setBookedSessions(p) } catch { setBookedSessions([]) } }, [])
+  useEffect(() => { (async () => { try { setLoading(true); setError(''); setSessions(normalizeTimetablePayload(await getTimetable())) } catch (e) { setError(e.message || 'Unable to load timetable data') } finally { setLoading(false) } })() }, [])
+  useEffect(() => { localStorage.setItem(BOOKED_SESSION_STORAGE_KEY, JSON.stringify(bookedSessions)) }, [bookedSessions])
 
   const allSessions = useMemo(() => [...sessions, ...bookedSessions], [bookedSessions, sessions])
+  const stats = useMemo(() => { const b = { total: allSessions.length, lecture: 0, lab: 0, tutorial: 0 }; allSessions.forEach(s => { const t = (s.sessionType || '').toLowerCase(); if (t === 'lecture') b.lecture++; else if (t === 'lab') b.lab++; else if (t === 'tutorial') b.tutorial++ }); return b }, [allSessions])
+  const uniqueDays = useMemo(() => [...new Set(allSessions.map(s => s.day).filter(Boolean).map(String))], [allSessions])
 
-  const stats = useMemo(() => {
-    const base = {
-      total: allSessions.length,
-      lecture: 0,
-      lab: 0,
-      tutorial: 0,
-    }
+  const filteredSessions = useMemo(() => allSessions.filter(s => {
+    const tt = (s.sessionType || '').toLowerCase(), dt = (s.day || '').toLowerCase()
+    const h = [s.subjectName, s.subjectCode, s.courseCode, s.faculty, s.className, s.section, s.batch, s.room].filter(Boolean).join(' ').toLowerCase()
+    return (!query || h.includes(query.toLowerCase())) && (typeFilter === 'all' || tt === typeFilter) && (dayFilter === 'all' || dt === dayFilter.toLowerCase())
+  }), [allSessions, dayFilter, query, typeFilter])
 
-    allSessions.forEach((session) => {
-      const type = (session.sessionType || '').toLowerCase()
-      if (type === 'lecture') {
-        base.lecture += 1
-      } else if (type === 'lab') {
-        base.lab += 1
-      } else if (type === 'tutorial') {
-        base.tutorial += 1
-      }
-    })
-
-    return base
-  }, [allSessions])
-
-  const uniqueDays = useMemo(() => {
-    const days = allSessions
-      .map((session) => session.day)
-      .filter(Boolean)
-      .map((day) => String(day))
-    return [...new Set(days)]
-  }, [allSessions])
-
-  const filteredSessions = useMemo(() => {
-    return allSessions.filter((session) => {
-      const typeText = (session.sessionType || '').toLowerCase()
-      const dayText = (session.day || '').toLowerCase()
-      const haystack = [
-        session.subjectName,
-        session.subjectCode,
-        session.courseCode,
-        session.faculty,
-        session.className,
-        session.section,
-        session.batch,
-        session.room,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-
-      const matchesQuery = !query || haystack.includes(query.toLowerCase())
-      const matchesType = typeFilter === 'all' || typeText === typeFilter
-      const matchesDay = dayFilter === 'all' || dayText === dayFilter.toLowerCase()
-
-      return matchesQuery && matchesType && matchesDay
-    })
-  }, [allSessions, dayFilter, query, typeFilter])
-
-  function handleSlotRequest(formData) {
-    const candidate = toBookableSession(formData)
-    const conflicts = findConflicts(candidate, allSessions)
-
-    if (!conflicts.length) {
-      setBookedSessions((prev) => [...prev, candidate])
-      return {
-        ok: true,
-        message: 'Slot is available. Session has been booked successfully.',
-        bookedSlot: {
-          day: candidate.day,
-          startTime: candidate.startTime,
-          endTime: candidate.endTime,
-          venue: candidate.room,
-        },
-      }
-    }
-
-    const suggestions = findAlternativeSlots(candidate, allSessions)
-    return {
-      ok: false,
-      message: 'Requested slot is not available due to a room, faculty, or section overlap.',
-      suggestions,
-    }
+  function handleSlotRequest(f) {
+    const c = toBookableSession(f), conflicts = findConflicts(c, allSessions)
+    if (!conflicts.length) { setBookedSessions(p => [...p, c]); return { ok: true, message: 'Slot is available. Session has been booked successfully.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } } }
+    return { ok: false, message: 'Requested slot is not available due to a room, faculty, or section overlap.', suggestions: findAlternativeSlots(c, allSessions) }
   }
 
   const content = useMemo(() => {
-    if (loading) {
-      return (
-        <div className="rounded-2xl border border-campus-100 bg-white/90 p-8 text-center shadow-lg">
-          <p className="text-base font-medium text-campus-700">Loading timetable sessions...</p>
-        </div>
-      )
-    }
-
-    if (error) {
-      return (
-        <div className="badge-conflict rounded-2xl p-6 text-center text-sm font-medium shadow-lg">
-          {error}
-        </div>
-      )
-    }
-
-    if (!allSessions.length) {
-      return (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/75 p-8 text-center shadow-lg">
-          <p className="text-slate-600">No timetable sessions found.</p>
-        </div>
-      )
-    }
-
-    if (!filteredSessions.length) {
-      return (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/75 p-8 text-center shadow-lg">
-          <p className="text-slate-700">No sessions match your current filters.</p>
-          <p className="mt-1 text-sm text-slate-500">Try clearing search text or selecting another type/day.</p>
-        </div>
-      )
-    }
-
+    if (loading) return (
+      <div className="glass-card p-8 text-center">
+        <div className="inline-block h-8 w-8 rounded-full border-2 border-honolulu-200 border-t-honolulu-500 animate-spin mb-3" />
+        <p className="text-base font-medium text-honolulu-600">Loading timetable sessions...</p>
+      </div>
+    )
+    if (error) return <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-sm font-medium text-red-600">{error}</div>
+    if (!allSessions.length) return <div className="glass-card border-dashed p-8 text-center"><p className="text-slate-500">No timetable sessions found.</p></div>
+    if (!filteredSessions.length) return <div className="glass-card border-dashed p-8 text-center"><p className="text-slate-600">No sessions match your current filters.</p><p className="mt-1 text-sm text-slate-400">Try clearing search text or selecting another type/day.</p></div>
     return (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {filteredSessions.map((session, index) => (
-          <SessionCard
-            key={session.id || session.sessionId || `${session.course || session.courseCode || 'session'}-${index}`}
-            session={session}
-          />
-        ))}
+        {filteredSessions.map((s, i) => <SessionCard key={s.id || s.sessionId || `${s.course || s.courseCode || 'session'}-${i}`} session={s} />)}
       </div>
     )
   }, [allSessions, error, filteredSessions, loading])
 
   return (
     <section className="space-y-6">
-      <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-panel">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">Timetable</h1>
-        <p className="mt-2 text-slate-600">
-          Browse complete academic sessions with class, type, section or batch, and exact time windows.
-        </p>
+      <div className="glass-card-strong relative overflow-hidden p-6">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-honolulu-500 via-amethyst-500 to-honolulu-500" />
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
+          <span className="bg-gradient-to-r from-honolulu-500 to-amethyst-500 bg-clip-text text-transparent">Timetable</span>
+        </h1>
+        <p className="mt-2 text-slate-500">Browse complete academic sessions with class, type, section or batch, and exact time windows.</p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-campus-100 bg-campus-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-campus-700">Total Sessions</p>
-            <p className="mt-2 text-2xl font-black text-campus-800">{stats.total}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Lectures</p>
-            <p className="mt-2 text-2xl font-black text-slate-900">{stats.lecture}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Labs</p>
-            <p className="mt-2 text-2xl font-black text-slate-900">{stats.lab}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Tutorials</p>
-            <p className="mt-2 text-2xl font-black text-slate-900">{stats.tutorial}</p>
-          </div>
+          <div className="stat-pill"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-honolulu-500">Total Sessions</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.total}</p></div>
+          <div className="stat-pill-purple"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amethyst-500">Lectures</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.lecture}</p></div>
+          <div className="stat-pill"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-honolulu-500">Labs</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.lab}</p></div>
+          <div className="stat-pill-purple"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amethyst-500">Tutorials</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.tutorial}</p></div>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by subject, faculty, class, room..."
-            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-campus-500 focus:outline-none"
-          />
-          <select
-            value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value)}
-            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-campus-500 focus:outline-none"
-          >
-            <option value="all">All Session Types</option>
-            <option value="lecture">Lecture</option>
-            <option value="lab">Lab</option>
-            <option value="tutorial">Tutorial</option>
-          </select>
-          <select
-            value={dayFilter}
-            onChange={(event) => setDayFilter(event.target.value)}
-            className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-campus-500 focus:outline-none"
-          >
-            <option value="all">All Days</option>
-            {uniqueDays.map((day) => (
-              <option key={day} value={day}>
-                {day}
-              </option>
-            ))}
-          </select>
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by subject, faculty, class, room..." className="input-glass" />
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input-glass"><option value="all">All Session Types</option><option value="lecture">Lecture</option><option value="lab">Lab</option><option value="tutorial">Tutorial</option></select>
+          <select value={dayFilter} onChange={e => setDayFilter(e.target.value)} className="input-glass"><option value="all">All Days</option>{uniqueDays.map(d => <option key={d} value={d}>{d}</option>)}</select>
         </div>
       </div>
-
-      <div>
-        <ScheduleRequestForm onRequest={handleSlotRequest} />
-      </div>
-
+      <div><ScheduleRequestForm onRequest={handleSlotRequest} /></div>
       {content}
     </section>
   )
