@@ -111,8 +111,6 @@ public class DataStore {
             "13:30",
             "14:20"
         ));
-        
-
         // Tuesday TimeTable CSE A
         sessions.add(new Session(
             "1",
@@ -130,7 +128,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "2",
-            "eicci24203",
+            "EICCI24203",
             "Data Communication and Computer Netwroks",
             "Dr. Mani Shekhar Gupta",
             "Room 305",
@@ -169,6 +167,105 @@ public class DataStore {
             "Tuesday",
             "13:30",
             "14:20"
+        ));
+        //Wednesday TimeTable CSE A
+        sessions.add(new Session(
+            "1",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Hitesh Chhinkaniwala",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "a",
+            "",
+            "Wednesday",
+            "09:10",
+            "10:00"
+        ));
+        sessions.add(new Session(
+            "2",
+            "EMABT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Ashlesha Bhise",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Wednesday",
+            "10:00",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "3",
+            "EICCI24203",
+            "Data Communication and Computer Netwroks",
+            "Dr. Mani Shekhar Gupta",
+            "Lab 201",
+            "CSE",
+            "Lab",
+            "",
+            "A1",
+            "Wednesday",
+            "11:00",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "3",
+            "ECSCI24203",
+            "Object Oriented Programminf with JAva",
+            "Ms. Nidhi Acharya",
+            "Lab 401",
+            "CSE",
+            "Lab",
+            "",
+            "A3",
+            "Wednesday",
+            "11:00",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "3",
+            "ECSCI24204",
+            "Operating System ",
+            "Dr. Anubhava Shrivastava",
+            "Lab 403",
+            "CSE",
+            "Lab",
+            "",
+            "A2",
+            "Wednesday",
+            "11:00",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "4",
+            "EMABT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Sougata Mandal",
+            "Room 305",
+            "CSE",
+            "Tutorial",
+            "",
+            "A2",
+            "Wednesday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "4",
+            "ECSAJ24204",
+            "Ideation and Conceptualization",
+            "Ms. Devashree Oza",
+            "Room 303B",
+            "CSE",
+            "Lab",
+            "",
+            "A1",
+            "Wedanesday",S
+            "13:30",
+            "15:10"
         ));
         return sessions;
     }
