@@ -424,6 +424,192 @@ public class DataStore {
                 "13:30",
                 "15:10"));
 
+        // CSE B timetable.
+        // Monday TimeTable CSE B
+        sessions.add(new Session(
+                "S32",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "",
+                "Lab 203",
+                "CSE",
+                "Lab",
+                "",
+                "B2",
+                "Mon",
+                "09:10",
+                "10:50"));
+        sessions.add(new Session(
+                "S33",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Mani Shekhar Gupta",
+                "Lab 201",
+                "CSE",
+                "Lab",
+                "",
+                "B3",
+                "Mon",
+                "09:10",
+                "10:50"));
+        sessions.add(new Session(
+                "S34",
+                "ECSCI24204",
+                "Operating System",
+                "Ms. Nidhi Acharya",
+                "Lab 403",
+                "CSE",
+                "Lab",
+                "",
+                "B1",
+                "Mon",
+                "09:10",
+                "10:50"));
+        sessions.add(new Session(
+                "S35",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Hitesh Chhinkaniwala",
+                "Room 304",
+                "CSE",
+                "Lecture",
+                "B",
+                "",
+                "Mon",
+                "11:00",
+                "11:50"));
+        sessions.add(new Session(
+                "S36",
+                "EMSAT24201",
+                "Engineering Economics",
+                "Dr. Jignesh Thaker",
+                "Room 304",
+                "CSE",
+                "Lecture",
+                "B",
+                "",
+                "Mon",
+                "12:40",
+                "13:30"));
+        sessions.add(new Session(
+                "S37",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Room 304",
+                "CSE",
+                "Lecture",
+                "B",
+                "",
+                "Mon",
+                "13:30",
+                "14:20"));
+        sessions.add(new Session(
+                "S38",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Mani Shekhar Gupta",
+                "Room 304",
+                "CSE",
+                "Lecture",
+                "B",
+                "",
+                "Mon",
+                "14:20",
+                "15:10"));
+        // Tuesday TimeTable CSE B
+        sessions.add(new Session(
+                "S39",
+                "EICCI24203",
+                "Data Communication and Computer Networks",
+                "Dr. Mani Shekhar Gupta",
+                "Lab 201",
+                "CSE",
+                "Lab",
+                "",
+                "B1",
+                "Tue",
+                "09:10",
+                "10:50"));
+        sessions.add(new Session(
+                "S40",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Tejas Modi",
+                "Lab 203",
+                "CSE",
+                "Lab",
+                "",
+                "B3",
+                "Tue",
+                "09:10",
+                "10:50"));
+        sessions.add(new Session(
+                "S41",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Ritu Pate",
+                "Lab 403",
+                "CSE",
+                "Lab",
+                "",
+                "B2",
+                "Tue",
+                "09:10",
+                "10:50"));
+        sessions.add(new Session(
+                "S42",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Hitesh Chhinkaniwala",
+                "Room 304",
+                "CSE",
+                "Lecture",
+                "B",
+                "",
+                "Tue",
+                "11:00",
+                "11:50"));
+        sessions.add(new Session(
+                "S43",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Ashlesha Bhise",
+                "Room 304",
+                "CSE",
+                "Lecture",
+                "B",
+                "",
+                "Tue",
+                "12:40",
+                "13:30"));
+        sessions.add(new Session(
+                "S44",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Sougata Mandal",
+                "Room 304",
+                "CSE",
+                "Tutorial",
+                "",
+                "B1",
+                "Tue",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S45",
+                "ECSAJ24204",
+                "Ideation and Conceptualization",
+                "Dr. Mihir Velani",
+                "Room 303B",
+                "CSE",
+                "Lab",
+                "",
+                "B2",
+                "Tue",
+                "13:30",
+                "15:10"));
+
         return sessions;
     }
 }
