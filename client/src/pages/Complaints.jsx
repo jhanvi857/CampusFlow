@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 const COMPLAINT_STORAGE_KEY = 'campusflow-complaints'
 const CATEGORY_HANDLERS = {
@@ -18,9 +19,12 @@ const STATUS_STYLES = {
   resolved: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
 }
 
-function defaultForm() { return { role: 'student', title: '', category: 'projector', location: '', severity: 'medium', description: '' } }
-
 function Complaints() {
+  const { user } = useAuth()
+  const isStudent = user?.role === 'student'
+  
+  const defaultForm = () => ({ role: isStudent ? 'student' : 'faculty', title: '', category: 'projector', location: '', severity: 'medium', description: '' })
+  
   const [form, setForm] = useState(defaultForm())
   const [complaints, setComplaints] = useState([])
   const [filter, setFilter] = useState('all')
@@ -35,7 +39,10 @@ function Complaints() {
     setComplaints(p => [{ id: `CMP-${Date.now()}`, ...form, status: 'open', ownerTeam: h.owner, escalationTeam: h.escalation, sla: h.sla, createdAt: new Date().toISOString() }, ...p])
     setForm(defaultForm())
   }
-  function updateStatus(id, s) { setComplaints(p => p.map(i => i.id === id ? { ...i, status: s } : i)) }
+  function updateStatus(id, s) { 
+    if (isStudent) return;
+    setComplaints(p => p.map(i => i.id === id ? { ...i, status: s } : i)) 
+  }
 
   const filtered = useMemo(() => filter === 'all' ? complaints : complaints.filter(i => i.status === filter), [complaints, filter])
   const stats = useMemo(() => { const b = { total: complaints.length, open: 0, 'in-review': 0, assigned: 0, resolved: 0 }; complaints.forEach(i => { if (b[i.status] !== undefined) b[i.status]++ }); return b }, [complaints])
@@ -64,8 +71,12 @@ function Complaints() {
           <h2 className="text-2xl font-extrabold text-slate-800">Raise A Complaint</h2>
           <p className="mt-1 text-sm text-slate-400">Attach enough details so the right team can act quickly.</p>
           <form onSubmit={submitComplaint} className="mt-5 grid gap-4 md:grid-cols-2">
-            <label className="space-y-1.5 text-sm font-medium text-slate-600">Reporter Role<select name="role" value={form.role} onChange={updateForm} className="input-glass"><option value="student">Student</option><option value="professor">Professor</option></select></label>
-            <label className="space-y-1.5 text-sm font-medium text-slate-600">Issue Category<select name="category" value={form.category} onChange={updateForm} className="input-glass"><option value="projector">Projector</option><option value="ac">AC / Cooling</option><option value="electricity">Electricity</option><option value="internet">Internet / Wi-Fi</option><option value="lab_equipment">Lab Equipment</option><option value="classroom_furniture">Classroom Furniture</option><option value="other">Other</option></select></label>
+            {!isStudent ? (
+              <label className="space-y-1.5 text-sm font-medium text-slate-600">Reporter Role<select name="role" value={form.role} onChange={updateForm} className="input-glass"><option value="professor">Faculty/Professor</option><option value="staff">Staff</option><option value="student">Student</option></select></label>
+            ) : (
+              <input type="hidden" name="role" value="student" />
+            )}
+            <label className={`space-y-1.5 text-sm font-medium text-slate-600 ${isStudent ? 'md:col-span-2' : ''}`}>Issue Category<select name="category" value={form.category} onChange={updateForm} className="input-glass"><option value="projector">Projector</option><option value="ac">AC / Cooling</option><option value="electricity">Electricity</option><option value="internet">Internet / Wi-Fi</option><option value="lab_equipment">Lab Equipment</option><option value="classroom_furniture">Classroom Furniture</option><option value="other">Other</option></select></label>
             <label className="space-y-1.5 text-sm font-medium text-slate-600 md:col-span-2">Complaint Title<input name="title" value={form.title} onChange={updateForm} required placeholder="e.g. Projector not turning on in Room 305" className="input-glass" /></label>
             <label className="space-y-1.5 text-sm font-medium text-slate-600">Location<input name="location" value={form.location} onChange={updateForm} required placeholder="e.g. Block B, Room 305" className="input-glass" /></label>
             <label className="space-y-1.5 text-sm font-medium text-slate-600">Severity<select name="severity" value={form.severity} onChange={updateForm} className="input-glass"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>

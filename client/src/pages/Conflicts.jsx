@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import ConflictGraph from '../components/ConflictGraph'
 import { getConflicts, getTimetable, analyzeCycle } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const sleep = ms => new Promise(res => setTimeout(res, ms))
 
 function Conflicts() {
+  const { user } = useAuth()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -17,12 +19,17 @@ function Conflicts() {
   const [diagLogs, setDiagLogs] = useState([])
   const [cycleStat, setCycleStat] = useState(null)
 
+  const isStudent = user?.role === 'student'
+
   useEffect(() => { (async () => { 
     try { 
       setLoading(true); 
       const t = await getTimetable();
       const locals = JSON.parse(localStorage.getItem('campusflow-booked-sessions') || '[]');
       const remote = Array.isArray(t) ? t : (t?.sessions || Object.values(t || {}));
+      
+      // For students, filter the sessions shown in graph too?
+      // Actually, graph shows all conflicts so they can see "why" their slot is occupied.
       setSessions([...remote, ...locals]);
     } catch (e) { setError(e.message) } finally { setLoading(false) } 
   })() }, [])
@@ -104,9 +111,17 @@ function Conflicts() {
     <section className="space-y-6">
       <div className="glass-card-strong relative overflow-hidden p-7 px-8">
         <div className="absolute inset-x-0 top-0 h-[4px] bg-gradient-to-r from-red-500 via-amethyst-500 to-red-500" />
-        <div>
-           <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-slate-800 uppercase italic">Diagnostic Audit Center</h1>
-           <p className="mt-1 text-slate-500 font-medium">Topological resource mapping and administrative override auditing.</p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl text-slate-800 uppercase italic">Diagnostic Audit Center</h1>
+            <p className="mt-1 text-slate-500 font-medium">Topological resource mapping and administrative override auditing.</p>
+          </div>
+          {isStudent && (
+             <div className="rounded-xl bg-honolulu-50 px-4 py-2 text-xs font-bold text-honolulu-600 border border-honolulu-100 flex items-center gap-2">
+               <span className="h-2 w-2 rounded-full bg-honolulu-400 animate-pulse" />
+               Live Conflict Monitor
+             </div>
+          )}
         </div>
       </div>
 
@@ -144,7 +159,7 @@ function Conflicts() {
                 </div>
                 {cycleStat?.hasCycle && (
                    <div className="mt-4 p-3 rounded-lg bg-red-950/40 border-l-2 border-red-500">
-                      <p className="text-[8px] font-black uppercase text-red-400 opacity-50 mb-1">Structural Impasse</p>
+                      <p className="text-[8px] font-black uppercase text-red-400 opacity-50 mb-1">Structural Impasse detected</p>
                       <p className="text-[10px] font-black text-red-200">{(cycleStat.path || []).join(' → ')}</p>
                    </div>
                 )}
