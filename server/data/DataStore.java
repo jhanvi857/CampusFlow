@@ -214,7 +214,7 @@ public class DataStore {
         sessions.add(new Session(
             "3",
             "ECSCI24203",
-            "Object Oriented Programminf with JAva",
+            "Object Oriented Programming with Java",
             "Ms. Nidhi Acharya",
             "Lab 401",
             "CSE",
@@ -263,7 +263,92 @@ public class DataStore {
             "Lab",
             "",
             "A1",
-            "Wedanesday",S
+            "Wedanesday",
+            "13:30",
+            "15:10"
+        ));
+        //Thursday TimeTable CSE A
+        sessions.add(new Session(
+            "1",
+            "EICCI24203",
+            "Data Communication and Computer Networks",
+            "Dr. Mani Shekhar Gupta",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Thursday",
+            "09:10",
+            "10:00"
+        ));
+        sessions.add(new Session(
+            "2",
+            "EMBAT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Sougata Mandal",
+            "Room 305",
+            "CSE",
+            "Lab",
+            "A",
+            "",
+            "Thursday",
+            "10:00",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "3",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Dr. Tejas Modi",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Thursday",
+            "11:00",
+            "11:50"
+        ));
+        sessions.add(new Session(
+            "4",
+            "",
+            "Engineering Economics",
+            "Dr. Jignesh Thaker",
+            "Room 305",
+            "CSE",
+            "Lecture",
+            "A",
+            "",
+            "Thursday",
+            "12:40",
+            "13:30"
+        ));
+        sessions.add(new Session(
+            "5",
+            "EMBAT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Sougata Mandal",
+            "Room 305",
+            "CSE",
+            "Tutorial",
+            "",
+            "A3",
+            "Thursday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "5",
+            "ECSAJ24204",
+            "Ideation and Conceptualization",
+            "Ms. Devashree Oza",
+            "Room 303B",
+            "CSE",
+            "Lab",
+            "",
+            "A2",
+            "Thusrday",
             "13:30",
             "15:10"
         ));
