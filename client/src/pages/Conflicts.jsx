@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import ConflictGraph from '../components/ConflictGraph'
-import { getConflicts } from '../services/api'
+import { getConflicts, getTimetable } from '../services/api'
 
 function normalizeConflictsPayload(p){if(!p)return{};if(Array.isArray(p))return p.reduce((a,i)=>{const s=i.session||i.source||i.id;const t=i.conflicts||i.targets||i.related||[];if(s)a[s]=Array.isArray(t)?t:[];return a},{});if(typeof p==='object')return p;return{}}
 
 function Conflicts() {
+  const [sessions, setSessions] = useState([])
   const [conflicts, setConflicts] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  useEffect(() => { (async () => { try { setLoading(true); setError(''); setConflicts(normalizeConflictsPayload(await getConflicts())) } catch (e) { setError(e.message || 'Unable to load conflict data') } finally { setLoading(false) } })() }, [])
+  useEffect(() => { (async () => { try { 
+    setLoading(true); setError(''); 
+    const [c, t] = await Promise.all([getConflicts(), getTimetable()]);
+    setConflicts(normalizeConflictsPayload(c));
+    setSessions(Array.isArray(t) ? t : (t?.sessions || Object.values(t || {})));
+  } catch (e) { setError(e.message || 'Unable to load conflict data') } finally { setLoading(false) } })() }, [])
 
   const items = useMemo(() => Object.entries(conflicts).map(([s, t]) => ({ source: s, targets: Array.isArray(t) ? t : [] })), [conflicts])
   const summary = useMemo(() => {
@@ -52,7 +58,7 @@ function Conflicts() {
               <span className="rounded-lg bg-red-50 border border-red-200 px-3 py-1 text-red-600">Red Lines: Conflict Links</span>
               <span className="rounded-lg bg-honolulu-50 border border-honolulu-200 px-3 py-1 text-honolulu-600">Gradient Nodes: Sessions</span>
             </div>
-            <ConflictGraph conflicts={conflicts} />
+            <ConflictGraph conflicts={conflicts} sessions={sessions} />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {items.map(item => (

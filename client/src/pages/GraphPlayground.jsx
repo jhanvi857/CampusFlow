@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
+import * as d3Force from 'd3-force'
+import * as d3Zoom from 'd3-zoom'
+import * as d3Selection from 'd3-selection'
+import * as d3Drag from 'd3-drag'
 import { getTimetable } from '../services/api'
 
 const BOOKED_SESSION_STORAGE_KEY = 'campusflow-booked-sessions'
@@ -78,11 +82,28 @@ function GraphPlayground() {
   const candidateSession = useMemo(() => toCandidateSession(form), [form])
   const baseNodes = useMemo(() => sessions.map(s => ({ id: String(s.id), session: s })), [sessions])
   const sessionById = useMemo(() => sessions.reduce((a, s) => { a[String(s.id)] = s; return a }, {}), [sessions])
-  const baseEdges = useMemo(() => buildBaseEdges(sessions, bufferMinutes), [bufferMinutes, sessions])
+  const baseEdges = useMemo(() => buildBaseEdges(sessions, bufferMinutes).map(e => ({ ...e, type: 'conflict' })), [bufferMinutes, sessions])
   const candidateConflicts = useMemo(() => findConflicts(candidateSession, sessions, bufferMinutes), [bufferMinutes, candidateSession, sessions])
-  const candidateEdges = useMemo(() => candidateConflicts.map(e => ({ left: 'REQ', right: String(e.session.id), reasons: e.reasons, kind: 'candidate' })), [candidateConflicts])
+  const candidateEdges = useMemo(() => candidateConflicts.map(e => ({ left: 'REQ', right: String(e.session.id), reasons: e.reasons, kind: 'candidate', type: 'conflict' })), [candidateConflicts])
+  
+  const structuralEdges = useMemo(() => {
+    const e = []; const all = [...sessions, candidateSession];
+    for (let i = 0; i < all.length; i++) {
+      for (let j = i + 1; j < all.length; j++) {
+        if (all[i].subjectCode && all[i].subjectCode === all[j].subjectCode && all[i].className === all[j].className) {
+          e.push({ left: String(all[i].id || 'REQ'), right: String(all[j].id || 'REQ'), kind: 'structural', type: 'structural' })
+        }
+      }
+    }
+    return e
+  }, [sessions, candidateSession])
+
   const nodes = useMemo(() => [...baseNodes, { id: 'REQ', session: candidateSession }], [baseNodes, candidateSession])
-  const edges = useMemo(() => [...baseEdges.slice(0, visibleBaseEdges), ...candidateEdges.slice(0, visibleCandidateEdges)], [baseEdges, candidateEdges, visibleBaseEdges, visibleCandidateEdges])
+  const edges = useMemo(() => {
+     const visBase = baseEdges.slice(0, visibleBaseEdges)
+     const visCand = candidateEdges.slice(0, visibleCandidateEdges)
+     return [...visBase, ...visCand, ...structuralEdges]
+  }, [baseEdges, visibleBaseEdges, candidateEdges, visibleCandidateEdges, structuralEdges])
 
   const cycleEdgeSet = useMemo(() => { if (!cycleResult?.cyclePath?.length) return new Set(); const s = new Set(); for (let i = 0; i < cycleResult.cyclePath.length - 1; i++) s.add([cycleResult.cyclePath[i], cycleResult.cyclePath[i + 1]].sort().join('|')); return s }, [cycleResult])
 
@@ -101,10 +122,67 @@ function GraphPlayground() {
     return `No cycle in current traversal. Potential missing links: ${missing.join(' | ')}.`
   }, [baseEdges, bufferMinutes, candidateConflicts, cycleResult, sessionById])
 
-  const nodePositions = useMemo(() => {
-    const w = 1000, h = 620, r = Math.max(210, Math.min(270, 100 + nodes.length * 14)), cx = w / 2, cy = h / 2
-    return nodes.reduce((a, n, i) => { const ang = (2 * Math.PI * i) / Math.max(nodes.length, 1) - Math.PI / 2; a[n.id] = { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) }; return a }, {})
-  }, [nodes])
+  const [nodePositions, setNodePositions] = useState({})
+  const [isStable, setIsStable] = useState(false)
+  const svgRef = useRef(null)
+  const gRef = useRef(null)
+
+  useEffect(() => {
+    if (!nodes.length) return
+
+    const width = 1000
+    const height = 800
+    
+    // Initialize nodes for D3
+    const d3Nodes = nodes.map(n => ({ ...n }))
+    const d3Edges = edges.map(e => ({ source: e.left, target: e.right, kind: e.kind, reasons: e.reasons }))
+
+    const simulation = d3Force.forceSimulation(d3Nodes)
+      .force("link", d3Force.forceLink(d3Edges).id(d => d.id).distance(d => d.type === 'conflict' ? 380 : 250))
+      .force("charge", d3Force.forceManyBody().strength(-3500))
+      .force("center", d3Force.forceCenter(width / 2, height / 2))
+      .force("collision", d3Force.forceCollide().radius(180))
+      .alphaDecay(0.015)
+      .velocityDecay(0.4)
+      .on("tick", () => {
+        const newPos = {}
+        d3Nodes.forEach(n => {
+          newPos[n.id] = { x: n.x, y: n.y }
+        })
+        setNodePositions({ ...newPos })
+      })
+      .on("end", () => setIsStable(true))
+
+    // Zoom setup
+    const svg = d3Selection.select(svgRef.current)
+    const g = d3Selection.select(gRef.current)
+    const zoom = d3Zoom.zoom()
+      .scaleExtent([0.1, 4])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform)
+      })
+
+    svg.call(zoom)
+    
+    // Drag setup
+    const drag = d3Drag.drag()
+      .on("start", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.2).restart()
+        d.fx = d.x; d.fy = d.y
+        setIsStable(false)
+      })
+      .on("drag", (event, d) => {
+        d.fx = event.x; d.fy = event.y
+      })
+      .on("end", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0)
+        d.fx = null; d.fy = null
+      })
+
+    d3Selection.selectAll(".node-group").data(d3Nodes).call(drag)
+
+    return () => simulation.stop()
+  }, [nodes.length, edges.length])
 
   async function runSimulation() {
     if (loading || !!error) return
@@ -194,33 +272,55 @@ function GraphPlayground() {
           {!!error && <p className="p-8 text-sm font-medium text-red-500">{error}</p>}
 
           {!loading && !error && (
-            <svg viewBox="0 0 1000 620" className="h-[620px] w-full" role="img" aria-label="Real graph lab">
+            <svg ref={svgRef} viewBox="0 0 1000 800" className="h-[800px] w-full cursor-move" role="img" aria-label="Real graph lab">
               <defs>
-                <linearGradient id="labNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#0077B6" /><stop offset="100%" stopColor="#8B5CF6" /></linearGradient>
+                <linearGradient id="lecNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#0EA5E9" /><stop offset="100%" stopColor="#0369A1" /></linearGradient>
+                <linearGradient id="labNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
+                <linearGradient id="tutNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#6D28D9" /></linearGradient>
                 <linearGradient id="reqNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#059669" /></linearGradient>
-                <filter id="labNodeGlow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                <filter id="labNodeGlow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
               </defs>
 
-              {edges.map((edge, i) => {
-                const from = nodePositions[edge.left], to = nodePositions[edge.right]
-                if (!from || !to) return null
-                const ek = [edge.left, edge.right].sort().join('|'), isCycle = cycleEdgeSet.has(ek), isC = edge.kind === 'candidate'
-                return <line key={`${edge.left}-${edge.right}-${edge.kind}-${i}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke={isCycle ? '#EF4444' : edgeColorForReasons(edge.reasons)} strokeWidth={isCycle ? 3.4 : isC ? 2.8 : 2.1} opacity="0.75" />
-              })}
+              <g ref={gRef}>
+                {edges.map((edge, i) => {
+                  const from = nodePositions[edge.left], to = nodePositions[edge.right]
+                  if (!from || !to) return null
+                  const ek = [edge.left, edge.right].sort().join('|'), isCycle = cycleEdgeSet.has(ek), isConf = edge.type === 'conflict'
+                  return (
+                    <line 
+                      key={`${edge.left}-${edge.right}-${edge.kind}-${i}`} 
+                      x1={from.x} y1={from.y} x2={to.x} y2={to.y} 
+                      stroke={isCycle ? '#EF4444' : isConf ? edgeColorForReasons(edge.reasons) : '#E2E8F0'} 
+                      strokeWidth={isConf ? "4" : "1.5"} 
+                      strokeDasharray={isConf ? "0" : "6 4"}
+                      opacity="0.6" 
+                    />
+                  )
+                })}
 
-              {nodes.map(node => {
-                const pos = nodePositions[node.id], isReq = node.id === 'REQ', inCycle = cycleResult?.cyclePath?.includes(node.id), isAS = activeScanId === node.id
-                const sLabel = isReq ? 'Requested Slot' : truncateLabel(node.session.subjectName || 'Session')
-                const rLabel = isReq ? `${node.session.room || 'Room TBD'} | ${node.session.day || ''} ${node.session.startTime || ''}-${node.session.endTime || ''}` : node.session.room || 'Room TBD'
-                return (
-                  <g key={node.id} filter="url(#labNodeGlow)">
-                    <circle cx={pos.x} cy={pos.y} r={isReq ? 30 : 23} fill={inCycle ? '#EF4444' : isReq ? 'url(#reqNodeGrad)' : 'url(#labNodeGrad)'} stroke={isAS ? '#F59E0B' : '#E2E8F0'} strokeWidth={isAS ? 4 : 1.5} />
-                    <text x={pos.x} y={pos.y - 1} textAnchor="middle" fill="#fff" className="text-[10px] font-bold">{isReq ? 'REQ' : 'SES'}</text>
-                    <text x={pos.x} y={pos.y + 41} textAnchor="middle" fill="#334155" className="text-[10px] font-semibold">{sLabel}</text>
-                    <text x={pos.x} y={pos.y + 54} textAnchor="middle" fill="#64748B" className="text-[9px] font-medium" opacity="0.7">{truncateLabel(rLabel, 40)}</text>
-                  </g>
-                )
-              })}
+                {nodes.map(node => {
+                  const pos = nodePositions[node.id], isReq = node.id === 'REQ', inCycle = cycleResult?.cyclePath?.includes(node.id), isAS = activeScanId === node.id
+                  if (!pos) return null
+                  const sType = node.session?.sessionType?.toLowerCase() || 'lecture'
+                  const grad = inCycle ? '#EF4444' : isReq ? 'url(#reqNodeGrad)' : sType === 'lab' ? 'url(#labNodeGrad)' : sType === 'tutorial' ? 'url(#tutNodeGrad)' : 'url(#lecNodeGrad)'
+                  
+                  const sLabel = isReq ? 'Requested Slot' : truncateLabel(node.session.subjectName || 'Session', 18)
+                  const rLabel = isReq ? `${node.session.room || 'Room TBD'} | ${node.session.day || ''} ${node.session.startTime || ''}-${node.session.endTime || ''}` : node.session.room || 'Room TBD'
+                  const rSize = isReq ? 70 : 55
+                  return (
+                    <g key={node.id} filter="url(#labNodeGlow)" className="node-group transition-transform duration-300">
+                      <circle cx={pos.x} cy={pos.y} r={rSize} fill={grad} stroke={isAS ? '#F59E0B' : '#E2E8F0'} strokeWidth={isAS ? 8 : 2} />
+                      <text x={pos.x} y={pos.y + 2} textAnchor="middle" fill="#fff" className="text-[14px] font-black">{isReq ? 'REQ' : sType.slice(0, 3).toUpperCase()}</text>
+                      
+                      <g className={`transition-opacity duration-300 ${isStable || isAS ? 'opacity-100' : 'opacity-60'}`}>
+                        <text x={pos.x} y={pos.y + rSize + 25} textAnchor="middle" fill="#1E293B" className="text-[14px] font-black">{sLabel}</text>
+                        <text x={pos.x} y={pos.y + rSize + 42} textAnchor="middle" fill="#64748B" className="text-[12px] font-bold" opacity="0.8">{truncateLabel(rLabel, 50)}</text>
+                        <text x={pos.x} y={pos.y + rSize + 58} textAnchor="middle" fill="#94A3B8" className="text-[10px] font-medium">{node.id}</text>
+                      </g>
+                    </g>
+                  )
+                })}
+              </g>
             </svg>
           )}
         </article>
