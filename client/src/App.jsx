@@ -1,12 +1,26 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Timetable from './pages/Timetable'
 import Conflicts from './pages/Conflicts'
 import Complaints from './pages/Complaints'
 import About from './pages/About'
+import Login from './pages/Login'
 
-function App() {
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  
+  return children;
+};
+
+function AppContent() {
+  const { user } = useAuth();
+  
   return (
     <div className="relative min-h-screen overflow-x-clip">
       {/* Ambient floating orbs */}
@@ -17,10 +31,11 @@ function App() {
       <Navbar />
       <main className="relative z-10 mx-auto w-full max-w-[1380px] px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <Routes>
+          <Route path="/login" element={user ? <Navigate to="/timetable" /> : <Login />} />
           <Route path="/" element={<Home />} />
-          <Route path="/timetable" element={<Timetable />} />
-          <Route path="/conflicts" element={<Conflicts />} />
-          <Route path="/complaints" element={<Complaints />} />
+          <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
+          <Route path="/conflicts" element={<ProtectedRoute><Conflicts /></ProtectedRoute>} />
+          <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -39,6 +54,14 @@ function App() {
         </div>
       </footer>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 

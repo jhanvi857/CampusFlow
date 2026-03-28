@@ -7,15 +7,15 @@ function ScheduleRequestForm({ onRequest }) {
   const [result, setResult] = useState(null)
   const isTimeRangeValid = useMemo(() => formData.endTime > formData.startTime, [formData])
 
-  function updateField(e) { 
-    const { name, value, type, checked } = e.target; 
-    setFormData(p => { 
-      const n = { ...p, [name]: type === 'checkbox' ? checked : value }; 
-      if (name === 'sessionType') { 
-        if (value === 'lab') n.section = ''; else n.batch = '' 
-      } 
-      return n 
-    }) 
+  function updateField(e) {
+    const { name, value, type, checked } = e.target;
+    setFormData(p => {
+      const n = { ...p, [name]: type === 'checkbox' ? checked : value };
+      if (name === 'sessionType') {
+        if (value === 'lab') n.section = ''; else n.batch = ''
+      }
+      return n
+    })
   }
   function resetForm() { setFormData({ subjectName: '', faculty: '', requestType: 'extra', sessionType: 'lecture', className: 'CSE', section: '', batch: '', venue: '', day: 'Mon', startTime: '09:00', endTime: '10:00', isOverride: false }); setResult(null) }
   function submitRequest(e) { e.preventDefault(); if (!isTimeRangeValid) { setResult({ ok: false, message: 'End time must be later than start time.', suggestions: [] }); return }; const r = onRequest(formData); setResult(r); if (r.ok) setFormData(p => ({ ...p, subjectName: '' })) }
@@ -71,7 +71,7 @@ function ScheduleRequestForm({ onRequest }) {
           {result.ok && result.bookedSlot && <p className="mt-1 text-xs opacity-80">Booked: {result.bookedSlot.day} {result.bookedSlot.startTime}-{result.bookedSlot.endTime} in {result.bookedSlot.venue}</p>}
           {!result.ok && !!result.suggestions?.length && (
             <ul className="mt-3 space-y-1 text-xs opacity-80">
-              {result.suggestions.map(s => <li key={`${s.day}-${s.startTime}-${s.endTime}-${s.venue}`} className="flex items-center gap-1"><span className="text-honolulu-500">→</span>Suggestion: {s.day} {s.startTime}-{s.endTime} in {s.venue}</li>)}
+              {result.suggestions.map(s => <li key={`${s.day}-${s.startTime}-${s.endTime}-${s.venue}`} className="flex items-center gap-1"><span className="text-honolulu-500">•</span>Suggestion: {s.day} {s.startTime}-{s.endTime} in {s.venue}</li>)}
             </ul>
           )}
         </div>
