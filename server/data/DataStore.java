@@ -12,6 +12,7 @@ import model.Session;
 public class DataStore {
     public static List<Session> getSessions() {
         List<Session> sessions = new ArrayList<>();
+//============================================================ CSE A =================================================================
         // Monday TimeTable CSE A
         sessions.add(new Session(
             "1",
@@ -44,7 +45,7 @@ public class DataStore {
         sessions.add(new Session(
             "3",
             "ECSCI224203",
-            "Object Oriented Programming With Java Lab",
+            "Object Oriented Programming With Java",
             "Dr. Tejas Modi",
             "Lab 203",
             "CSE",
@@ -382,20 +383,6 @@ public class DataStore {
             "10:50"
         ));
         sessions.add(new Session(
-            "3",
-            "EPDAJ24201",
-            "Career Development Cell",
-            "",
-            "Room 203",
-            "CSE",
-            "Lecture",
-            "A",
-            "",
-            "Friday",
-            "11:00",
-            "11:50"
-        ));
-        sessions.add(new Session(
             "4",
             "ECSCI24203",
             "Object Oriented Programming with Java",
@@ -449,6 +436,106 @@ public class DataStore {
             "A3",
             "Friday",
             "13:30",
+            "15:10"
+        ));
+//=============================================================== CSE B ======================================================================
+        //Monday TimeTable CSE B 
+        sessions.add(new Session(
+            "1",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "",
+            "Lab 203",
+            "CSE",
+            "Lab",
+            "",
+            "B2",
+            "Monday",
+            "09:10",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "1",
+            "EICCI24203",
+            "Data Communication and Computer Networks",
+            "Dr. Mani Shekhar Gupta",
+            "Lab 201",
+            "CSE",
+            "Lab",
+            "",
+            "B3",
+            "Monday",
+            "09:10",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "1",
+            "ECSCI24204",
+            "Operating System",
+            "Ms. Nidhi Acharya",
+            "Lab 403",
+            "CSE",
+            "Lab",
+            "",
+            "B1",
+            "Monday",
+            "09:10",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "2",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Hitesh Chhinkaniwala",
+            "Room 304",
+            "CSE",
+            "Lecture",
+            "B",
+            "",
+            "Monday",
+            "11:00",
+            "11:50"
+        ));
+        sessions.add(new Session(
+            "3",
+            "EMSAT24201",
+            "Engineering Economics",
+            "Dr. Jignesh Thaker",
+            "Room 304",
+            "CSE",
+            "Lecture",
+            "B",
+            "",
+            "Monday",
+            "12:40",
+            "13:30"
+        ));
+        sessions.add(new Session(
+            "4",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Dr. Tejas Modi",
+            "Room 304",
+            "CSE",
+            "Lecture",
+            "B",
+            "",
+            "Monday",
+            "13:30",
+            "14:20"
+        ));
+        sessions.add(new Session(
+            "5",
+            "EICCI24203",
+            "Data Communication and Computer Networks",
+            "Dr. Mani Shekhar Gupta",
+            "Room 304",
+            "CSE",
+            "Lecture",
+            "B",
+            "",
+            "Monday",
+            "14:20",
             "15:10"
         ));
         return sessions;
