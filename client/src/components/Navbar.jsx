@@ -6,7 +6,6 @@ const navItems = [
   { to: '/timetable', label: 'Timetable', icon: '◫' },
   { to: '/conflicts', label: 'Conflicts', icon: '⚡' },
   { to: '/complaints', label: 'Complaints', icon: '✦' },
-  { to: '/graph-lab', label: 'Graph Lab', icon: '◈' },
   { to: '/about', label: 'About', icon: 'ℹ' },
 ]
 

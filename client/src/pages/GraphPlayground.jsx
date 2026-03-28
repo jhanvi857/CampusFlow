@@ -1,409 +1,287 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import * as d3Force from 'd3-force'
 import * as d3Zoom from 'd3-zoom'
 import * as d3Selection from 'd3-selection'
 import * as d3Drag from 'd3-drag'
-import { getTimetable } from '../services/api'
+import { getTimetable, analyzeCycle } from '../services/api'
 
 const BOOKED_SESSION_STORAGE_KEY = 'campusflow-booked-sessions'
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
-function normalizeTimetablePayload(p) { if (Array.isArray(p)) return p; if (p && Array.isArray(p.sessions)) return p.sessions; if (p && typeof p === 'object') return Object.values(p); return [] }
-function toMinutes(t) { if (!t || !t.includes(':')) return null; const [h, m] = t.split(':'); const hh = Number(h), mm = Number(m); return Number.isNaN(hh) || Number.isNaN(mm) ? null : hh * 60 + mm }
-function getSessionWindow(s) { const d = s.day, st = toMinutes(s.startTime), en = toMinutes(s.endTime); if (!d || st === null || en === null) return null; return { day: d, start: st, end: en } }
-function intervalsConflict(a, b, buf = 0) { return a.start < b.end + buf && b.start < a.end + buf }
-function isSameText(a, b) { return !a || !b ? false : String(a).trim().toLowerCase() === String(b).trim().toLowerCase() }
+const sleep = ms => new Promise(res => setTimeout(res, ms))
 
-function analyzeConflict(l, r, buf = 10) {
-  const lw = getSessionWindow(l), rw = getSessionWindow(r)
-  if (!lw || !rw) return { overlap: false, sameFaculty: false, sameRoom: false, sameClass: false, sameSection: false, sameBatch: false, reasons: [] }
-  const ov = lw.day === rw.day && intervalsConflict(lw, rw, buf)
-  const sf = ov && isSameText(l.faculty, r.faculty), sr = ov && isSameText(l.room, r.room)
-  const sc = ov && isSameText(l.className, r.className)
-  const ss = sc && !!l.section && !!r.section && isSameText(l.section, r.section)
-  const sb = sc && !!l.batch && !!r.batch && isSameText(l.batch, r.batch)
-  if (!ov) return { overlap: ov, sameFaculty: sf, sameRoom: sr, sameClass: sc, sameSection: ss, sameBatch: sb, reasons: [] }
-  const reasons = []
-  if (sf) reasons.push('Faculty Conflict'); if (sr) reasons.push('Room Conflict')
-  if (sc && (ss || sb)) reasons.push('Class Conflict'); if (ss) reasons.push('Section Conflict'); if (sb) reasons.push('Batch Conflict')
-  return { overlap: ov, sameFaculty: sf, sameRoom: sr, sameClass: sc, sameSection: ss, sameBatch: sb, reasons }
+function truncateLabel(v, max = 22) {
+  return !v ? '' : v.length > max ? `${v.slice(0, max - 1)}...` : v
 }
-
-function findConflicts(c, all, buf = 10) { return all.map(s => { const d = analyzeConflict(c, s, buf); return { session: s, diagnostics: d, reasons: d.reasons } }).filter(e => e.reasons.length > 0) }
-
-function buildBaseEdges(all, buf = 10) {
-  const edges = []
-  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
-    const d = analyzeConflict(all[i], all[j], buf)
-    if (d.reasons.length) edges.push({ left: String(all[i].id), right: String(all[j].id), reasons: d.reasons, kind: 'base' })
-  }
-  return edges
-}
-
-function buildAdjacency(nodes, edges) { const m = nodes.reduce((a, n) => { a[n.id] = []; return a }, {}); edges.forEach(e => { if (m[e.left]) m[e.left].push(e.right); if (m[e.right]) m[e.right].push(e.left) }); return m }
-
-function detectCycle(nodes, edges) {
-  const adj = buildAdjacency(nodes, edges), visited = new Set(), stack = new Set(), parent = {}, logs = []
-  let cyclePath = []
-  function dfs(id, pid = null) {
-    visited.add(id); stack.add(id); logs.push(`Visit ${id}`)
-    for (const nx of adj[id] || []) {
-      logs.push(`Explore ${id} -> ${nx}`); if (nx === pid) continue
-      if (!visited.has(nx)) { parent[nx] = id; if (dfs(nx, id)) return true }
-      else if (stack.has(nx)) { logs.push(`Back-edge ${id} -> ${nx}: cycle detected`); const path = [nx]; let cur = id; while (cur && cur !== nx) { path.push(cur); cur = parent[cur] }; path.push(nx); cyclePath = path.reverse(); return true }
-    }
-    stack.delete(id); logs.push(`Leave ${id}`); return false
-  }
-  for (const n of nodes) if (!visited.has(n.id) && dfs(n.id, null)) return { hasCycle: true, cyclePath, logs }
-  return { hasCycle: false, cyclePath: [], logs }
-}
-
-function toCandidateSession(f) { return { id: 'REQ', subjectName: f.subjectName, subjectCode: f.subjectName, faculty: f.faculty, className: f.className, sessionType: f.sessionType, section: f.section, batch: f.batch, room: f.room, day: f.day, startTime: f.startTime, endTime: f.endTime } }
-function truncateLabel(v, max = 26) { return !v ? '' : v.length > max ? `${v.slice(0, max - 1)}...` : v }
-function edgeColorForReasons(r) { if (r.includes('Faculty Conflict')) return '#EF4444'; if (r.includes('Room Conflict')) return '#0077B6'; if (r.includes('Batch Conflict') || r.includes('Section Conflict')) return '#F59E0B'; return '#8B5CF6' }
 
 function GraphPlayground() {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [form, setForm] = useState({ subjectName: 'CS999 Demo', faculty: 'Dr. Smith', className: 'CSE', sessionType: 'lecture', section: 'A', batch: '', room: 'Room 101', day: 'Mon', startTime: '09:30', endTime: '10:30' })
-  const [phase, setPhase] = useState('idle')
+  const [error, setError] = useState(null)
+  const [form, setForm] = useState({ subjectName: 'New Elective', faculty: 'Dr. Graph', className: 'CSE', section: 'A', batch: '', venue: 'Lab 101', day: 'Mon', startTime: '11:00', endTime: '12:00' })
+
+  const [nodePositions, setNodePositions] = useState({})
   const [activeScanId, setActiveScanId] = useState('')
+  const [phase, setPhase] = useState('idle') // idle, build, scan, link, cycle, done
   const [visibleBaseEdges, setVisibleBaseEdges] = useState(0)
   const [visibleCandidateEdges, setVisibleCandidateEdges] = useState(0)
   const [traceLogs, setTraceLogs] = useState([])
   const [cycleResult, setCycleResult] = useState(null)
-  const [bufferMinutes, setBufferMinutes] = useState(10)
 
-  useEffect(() => { (async () => { try { setLoading(true); setError(''); const td = await getTimetable(); const bs = normalizeTimetablePayload(td); const bk = JSON.parse(localStorage.getItem(BOOKED_SESSION_STORAGE_KEY) || '[]'); setSessions([...bs, ...(Array.isArray(bk) ? bk : [])]) } catch (e) { setError(e.message || 'Unable to load graph data') } finally { setLoading(false) } })() }, [])
+  const svgRef = useRef(null)
+  const gRef = useRef(null)
+  const bufferMinutes = 0
 
-  function updateField(e) { const { name, value } = e.target; setForm(p => { const n = { ...p, [name]: value }; if (name === 'sessionType') { if (value === 'lab') { n.section = ''; n.batch = 'A1' } else { n.batch = ''; if (!n.section) n.section = 'A' } } return n }) }
-
-  const candidateSession = useMemo(() => toCandidateSession(form), [form])
-  const baseNodes = useMemo(() => sessions.map(s => ({ id: String(s.id), session: s })), [sessions])
-  const sessionById = useMemo(() => sessions.reduce((a, s) => { a[String(s.id)] = s; return a }, {}), [sessions])
-  const baseEdges = useMemo(() => buildBaseEdges(sessions, bufferMinutes).map(e => ({ ...e, type: 'conflict' })), [bufferMinutes, sessions])
-  const candidateConflicts = useMemo(() => findConflicts(candidateSession, sessions, bufferMinutes), [bufferMinutes, candidateSession, sessions])
-  const candidateEdges = useMemo(() => candidateConflicts.map(e => ({ left: 'REQ', right: String(e.session.id), reasons: e.reasons, kind: 'candidate', type: 'conflict' })), [candidateConflicts])
-  
-  const structuralEdges = useMemo(() => {
-    const e = []; const all = [...sessions, candidateSession];
-    for (let i = 0; i < all.length; i++) {
-      for (let j = i + 1; j < all.length; j++) {
-        const s1 = all[i], s2 = all[j];
-        // Connect same class + section (e.g. CSE A nodes should stick together)
-        const sameGroup = isSameText(s1.className, s2.className) && 
-                          (isSameText(s1.section, s2.section) || (!s1.section && !s2.section));
-        
-        if (sameGroup) {
-          e.push({ left: String(s1.id || 'REQ'), right: String(s2.id || 'REQ'), kind: 'structural', type: 'structural' })
-        }
+  useEffect(() => {
+    async function init() {
+      try {
+        const data = await getTimetable()
+        const local = JSON.parse(localStorage.getItem(BOOKED_SESSION_STORAGE_KEY) || '[]')
+        setSessions([...data, ...local])
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
       }
     }
-    return e
-  }, [sessions, candidateSession])
+    init()
+  }, [])
 
-  const nodes = useMemo(() => [...baseNodes, { id: 'REQ', session: candidateSession }], [baseNodes, candidateSession])
-  const edges = useMemo(() => {
-     const visBase = baseEdges.slice(0, visibleBaseEdges).map(e => ({ ...e, type: 'conflict' }))
-     const visCand = candidateEdges.slice(0, visibleCandidateEdges).map(e => ({ ...e, type: 'conflict' }))
-     return [...visBase, ...visCand, ...structuralEdges]
-  }, [baseEdges, visibleBaseEdges, candidateEdges, visibleCandidateEdges, structuralEdges])
+  function updateField(e) { setForm(p => ({ ...p, [e.target.name]: e.target.value })) }
+
+  const nodes = useMemo(() => {
+    const list = sessions.map(s => ({ id: String(s.id), session: s }))
+    list.push({ id: 'REQ', session: { ...form, id: 'REQ', startTime: form.startTime, endTime: form.endTime, day: form.day, room: form.venue } })
+    return list
+  }, [sessions, form])
+
+  const analyzeConflict = (s1, s2, buffer = 0) => {
+    const reasons = []
+    if (s1.id === s2.id) return { conflict: false, reasons }
+    if (s1.day !== s2.day) return { conflict: false, reasons }
+
+    const t = (v) => { const [h, m] = v.split(':').map(Number); return h * 60 + m }
+    const s1Start = t(s1.startTime), s1End = t(s1.endTime)
+    const s2Start = t(s2.startTime), s2End = t(s2.endTime)
+
+    const overlaps = s1Start < (s2End + buffer) && s2Start < (s1End + buffer)
+    if (!overlaps) return { conflict: false, reasons }
+
+    if (s1.faculty && s1.faculty === s2.faculty) reasons.push('Faculty')
+    if (s1.room && s1.room === s2.room) reasons.push('Room')
+    if (s1.className && s1.className === s2.className) {
+      if (s1.section && s1.section === s2.section) reasons.push('Section')
+      else if (s1.batch && s1.batch === s2.batch) reasons.push('Batch')
+    }
+    return { conflict: reasons.length > 0, reasons }
+  }
+
+  const baseEdges = useMemo(() => {
+    const edges = []
+    for (let i = 0; i < sessions.length; i++) {
+      for (let j = i + 1; j < sessions.length; j++) {
+        const res = analyzeConflict(sessions[i], sessions[j])
+        if (res.conflict) edges.push({ left: String(sessions[i].id), right: String(sessions[j].id), reasons: res.reasons, type: 'structural' })
+      }
+    }
+    return edges
+  }, [sessions])
+
+  const candidateSession = { ...form, id: 'REQ', startTime: form.startTime, endTime: form.endTime, day: form.day, room: form.venue }
+  const candidateConflicts = useMemo(() => {
+    return sessions.map(s => {
+      const res = analyzeConflict(candidateSession, s, bufferMinutes)
+      return res.conflict ? { session: s, reasons: res.reasons } : null
+    }).filter(Boolean)
+  }, [sessions, form])
+
+  const candidateEdges = useMemo(() => {
+    return candidateConflicts.map(c => ({ left: 'REQ', right: String(c.session.id), reasons: c.reasons, type: 'conflict' }))
+  }, [candidateConflicts])
+
+  const edges = useMemo(() => [...baseEdges, ...candidateEdges], [baseEdges, candidateEdges])
+  const cycleEdgeSet = useMemo(() => {
+    const set = new Set()
+    if (cycleResult?.path) {
+      for (let i = 0; i < cycleResult.path.length - 1; i++) {
+        set.add([cycleResult.path[i], cycleResult.path[i + 1]].sort().join('|'))
+      }
+    }
+    return set
+  }, [cycleResult])
+
+  const width = 1600
+  const height = 1200
 
   const groupCenters = useMemo(() => {
-    const width = 1600; const height = 1200;
     const groups = [...new Set(nodes.map(n => (n.session.className || 'Other') + (n.session.section || '')))];
     const centers = {};
     groups.forEach((g, i) => {
       const angle = (i / groups.length) * 2 * Math.PI;
-      centers[g] = { 
-        x: width / 2 + Math.cos(angle) * 450, 
-        y: height / 2 + Math.sin(angle) * 380,
-        label: g.toUpperCase()
-      };
+      centers[g] = { x: width / 2 + Math.cos(angle) * 500, y: height / 2 + Math.sin(angle) * 400, label: g.toUpperCase() };
     });
     return centers;
   }, [nodes])
 
-  const cycleEdgeSet = useMemo(() => { if (!cycleResult?.cyclePath?.length) return new Set(); const s = new Set(); for (let i = 0; i < cycleResult.cyclePath.length - 1; i++) s.add([cycleResult.cyclePath[i], cycleResult.cyclePath[i + 1]].sort().join('|')); return s }, [cycleResult])
-
-  const noCycleInsight = useMemo(() => {
-    if (!cycleResult || cycleResult.hasCycle) return ''
-    const ids = candidateConflicts.map(e => String(e.session.id))
-    if (ids.length < 2) return 'Only one conflict neighbor connected to REQ, so no closed loop can exist.'
-    const bkeys = new Set(baseEdges.map(e => [e.left, e.right].sort().join('|')))
-    const missing = []; let hasLink = false
-    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) {
-      const k = [ids[i], ids[j]].sort().join('|')
-      if (bkeys.has(k)) hasLink = true
-      else { const ls = sessionById[ids[i]], rs = sessionById[ids[j]]; const pd = ls && rs ? analyzeConflict(ls, rs, bufferMinutes) : null; missing.push(pd ? `${ids[i]}--${ids[j]} (overlap=${pd.overlap}, faculty=${pd.sameFaculty}, room=${pd.sameRoom})` : `${ids[i]}--${ids[j]}`) }
-    }
-    if (!hasLink) return `No cycle: conflict nodes only connect through REQ (star shape). Missing: ${missing.join(' | ')}.`
-    return `No cycle in current traversal. Potential missing links: ${missing.join(' | ')}.`
-  }, [baseEdges, bufferMinutes, candidateConflicts, cycleResult, sessionById])
-
-  const [nodePositions, setNodePositions] = useState({})
-  const [isStable, setIsStable] = useState(false)
-  const svgRef = useRef(null)
-  const gRef = useRef(null)
-
   useEffect(() => {
     if (!nodes.length) return
-
-    const width = 1600
-    const height = 1200
-    
-    // Initialize nodes for D3
-
-    // Initialize nodes for D3
-    const d3Nodes = nodes.map(n => {
-      const gKey = (n.session.className || 'Other') + (n.session.section || '');
-      return { ...n, group: gKey };
-    });
-    const d3Edges = edges.map(e => ({ source: e.left, target: e.right, kind: e.kind, reasons: e.reasons, type: e.type }));
+    const d3Nodes = nodes.map(n => ({ ...n, group: (n.session.className || 'Other') + (n.session.section || '') }))
+    const d3Edges = edges.map(e => ({ source: e.left, target: e.right }))
 
     const simulation = d3Force.forceSimulation(d3Nodes)
-      .force("link", d3Force.forceLink(d3Edges).id(d => d.id).distance(d => d.type === 'conflict' ? 500 : 250).strength(d => d.type === 'structural' ? 0.35 : 0.05))
-      .force("charge", d3Force.forceManyBody().strength(-6000))
+      .force("link", d3Force.forceLink(d3Edges).id(d => d.id).distance(250).strength(0.1))
+      .force("charge", d3Force.forceManyBody().strength(-7000))
       .force("center", d3Force.forceCenter(width / 2, height / 2))
-      .force("x", d3Force.forceX().x(d => groupCenters[d.group]?.x || width / 2).strength(0.35))
-      .force("y", d3Force.forceY().y(d => groupCenters[d.group]?.y || height / 2).strength(0.35))
-      .force("collision", d3Force.forceCollide().radius(180))
-      .alphaDecay(0.008) // Very slow decay for super-stable movement
-      .velocityDecay(0.75) // Heavy friction to stop 'dancing'
+      .force("x", d3Force.forceX().x(d => groupCenters[d.group]?.x || width / 2).strength(0.4))
+      .force("y", d3Force.forceY().y(d => groupCenters[d.group]?.y || height / 2).strength(0.4))
+      .force("collision", d3Force.forceCollide().radius(220))
+      .alphaDecay(0.06)
+      .velocityDecay(0.4)
       .on("tick", () => {
-        const newPos = {}
-        d3Nodes.forEach(n => {
-          newPos[n.id] = { x: n.x, y: n.y }
-        })
-        setNodePositions({ ...newPos })
+        const p = {}; d3Nodes.forEach(n => { p[n.id] = { x: n.x, y: n.y } }); setNodePositions({ ...p })
       })
-      .on("end", () => setIsStable(true))
 
-    // Zoom setup
     const svg = d3Selection.select(svgRef.current)
     const g = d3Selection.select(gRef.current)
-    const zoom = d3Zoom.zoom()
-      .scaleExtent([0.1, 4])
-      .on("zoom", (event) => {
-        g.attr("transform", event.transform)
-      })
-
-    svg.call(zoom)
-    
-    // Drag setup
-    const drag = d3Drag.drag()
-      .on("start", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0.2).restart()
-        d.fx = d.x; d.fy = d.y
-        setIsStable(false)
-      })
-      .on("drag", (event, d) => {
-        d.fx = event.x; d.fy = event.y
-      })
-      .on("end", (event, d) => {
-        if (!event.active) simulation.alphaTarget(0)
-        d.fx = null; d.fy = null
-      })
-
-    d3Selection.selectAll(".node-group").data(d3Nodes).call(drag)
+    const zoom = d3Zoom.zoom().scaleExtent([0.1, 3]).on("zoom", (e) => g.attr("transform", e.transform))
+    svg.call(zoom).call(zoom.transform, d3Zoom.zoomIdentity.translate(0, 0).scale(0.6))
 
     return () => simulation.stop()
-  }, [nodes.length, edges.length])
+  }, [nodes.length, edges.length, groupCenters])
 
   async function runSimulation() {
     if (loading || !!error) return
-    setPhase('build'); setTraceLogs(['Initializing nodes for every academic session...']); setCycleResult(null); setActiveScanId('')
-    setVisibleBaseEdges(0); for (let i = 1; i <= baseEdges.length; i++) { setVisibleBaseEdges(i); await sleep(120) }
-    
-    setPhase('scan'); setTraceLogs(p => [...p, 'Sequential scan for overlaps against Request Node (REQ)...'])
-    for (const s of sessions) { 
-      const r = analyzeConflict(candidateSession, s, bufferMinutes); 
-      setActiveScanId(String(s.id)); 
-      await sleep(400); // Slowed down scan for user followability
-      if (r.reasons.length) setTraceLogs(p => [...p, `Found logical clash with ${s.id}: ${r.reasons.join(' + ')}`]) 
+    setPhase('build'); setTraceLogs(['Initializing session topology...']); setCycleResult(null); setActiveScanId('')
+    setVisibleBaseEdges(0); for (let i = 1; i <= baseEdges.length; i++) { setVisibleBaseEdges(i); await sleep(80) }
+
+    setPhase('scan'); setTraceLogs(p => [...p, 'Scanning resource overlaps for REQ...'])
+    for (const s of sessions) {
+      const r = analyzeConflict(candidateSession, s, bufferMinutes);
+      setActiveScanId(String(s.id)); await sleep(350);
+      if (r.reasons.length) setTraceLogs(p => [...p, `Clash at ${s.id}: ${r.reasons.join('|')}`])
     }
-    
-    if (!candidateConflicts.length) setTraceLogs(p => [...p, 'No conflicts detected for the current time slot.'])
-    setActiveScanId(''); 
-    
-    setPhase('link'); setTraceLogs(p => [...p, 'Visualizing conflict paths (High-strength undirected edges)...'])
-    setVisibleCandidateEdges(0); for (let i = 1; i <= candidateEdges.length; i++) { setVisibleCandidateEdges(i); await sleep(300) }
-    
-    setPhase('cycle'); setTraceLogs(p => [...p, 'Executing Cycle Detection (DFS Traversal)...'])
-    await sleep(800)
-    const result = detectCycle(nodes, [...baseEdges, ...candidateEdges])
-    setCycleResult(result); setTraceLogs(p => [...p, ...result.logs]); setPhase('done')
-  }
+    setActiveScanId('');
 
-  function resetVisual() { 
-    setVisibleBaseEdges(baseEdges.length); 
-    setVisibleCandidateEdges(candidateEdges.length); 
-    setActiveScanId(''); 
-    setTraceLogs(['Visual reset complete. Data re-summarized.']); 
-    setCycleResult(null); 
-    setPhase('idle') 
-  }
+    setPhase('link'); setTraceLogs(p => [...p, 'Mapping conflict edges...'])
+    setVisibleCandidateEdges(0); for (let i = 1; i <= candidateEdges.length; i++) { setVisibleCandidateEdges(i); await sleep(250) }
 
-  const stats = useMemo(() => ({ sessions: sessions.length, baseEdges: baseEdges.length, candidateEdges: candidateEdges.length, candidateConflicts: candidateConflicts.length }), [baseEdges.length, candidateConflicts.length, candidateEdges.length, sessions.length])
+    setPhase('cycle'); setTraceLogs(p => [...p, 'Triggering backend DMGT Parser...'])
+    try {
+      const res = await analyzeCycle()
+      setCycleResult(res); setTraceLogs(p => [...p, ...res.logs])
+    } catch (err) { setTraceLogs(p => [...p, `Error: ${err.message}`]) }
+    setPhase('done')
+  }
 
   const stepStates = [
-    { id: 'build', title: 'Build Session Nodes', detail: 'Every lecture/lab/tutorial is modeled as one node.', active: phase === 'build', done: ['scan', 'link', 'cycle', 'done'].includes(phase) },
-    { id: 'scan', title: 'Scan Request Against Sessions', detail: 'Compare day + time overlap and check faculty/room/section/batch.', active: phase === 'scan', done: ['link', 'cycle', 'done'].includes(phase) },
-    { id: 'link', title: 'Create Conflict Edges', detail: 'Add undirected edges from request node to all conflicting sessions.', active: phase === 'link', done: ['cycle', 'done'].includes(phase) },
-    { id: 'cycle', title: 'Run Cycle Detection', detail: 'Apply DFS on undirected conflict graph to detect cycle structures.', active: phase === 'cycle', done: phase === 'done' },
+    { id: 'build', title: 'Preparation', active: phase === 'build', done: ['scan', 'link', 'cycle', 'done'].includes(phase) },
+    { id: 'scan', title: 'Scanning', active: phase === 'scan', done: ['link', 'cycle', 'done'].includes(phase) },
+    { id: 'link', title: 'Mapping', active: phase === 'link', done: ['cycle', 'done'].includes(phase) },
+    { id: 'cycle', title: 'Analysis', active: phase === 'cycle', done: phase === 'done' },
   ]
 
   return (
     <section className="space-y-6">
-      <article className="glass-card-strong relative overflow-hidden p-7">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-honolulu-500 via-amethyst-500 to-honolulu-500" />
-        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-          <span className="bg-gradient-to-r from-honolulu-500 to-amethyst-500 bg-clip-text text-transparent">Graph Lab</span>
-          <span className="text-slate-800">: Real Conflict Pipeline</span>
-        </h1>
-        <p className="mt-3 max-w-4xl text-base text-slate-500">This view uses your real timetable nodes and conflict edges. It then injects a request node from the same fields used in reschedule/extra lecture flow, scans clashes, creates new edges, and finally runs cycle detection with trace logs.</p>
+      <div className="glass-card-strong p-7 text-center">
+        <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-honolulu-600 to-amethyst-600 bg-clip-text text-transparent">Topological Lab</h1>
+        <p className="mt-2 text-slate-500 font-medium">Verify scheduling logical stability through Graph Theory DFS.</p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="stat-pill"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Sessions</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.sessions}</p></div>
-          <div className="stat-pill-danger"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-red-500">Base Conflict Edges</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.baseEdges}</p></div>
-          <div className="stat-pill-warning"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-500">Request Conflict Edges</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.candidateEdges}</p></div>
-          <div className="stat-pill-purple"><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-amethyst-500">Detected Clashes</p><p className="mt-2 text-2xl font-black text-slate-800">{stats.candidateConflicts}</p></div>
-        </div>
-      </article>
-
-      <article className="glass-card relative overflow-hidden p-7">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-amethyst-500 to-honolulu-500" />
-        <h2 className="text-2xl font-extrabold text-slate-800">Graph Model</h2>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="stat-pill"><p className="text-sm font-bold text-slate-800">Nodes (Vertices)</p><p className="mt-1 text-sm text-slate-500">Each node represents one class session. Example: S1 = DSA | ProfA | L101 | Mon 09:00-10:00</p></div>
-          <div className="stat-pill-purple"><p className="text-sm font-bold text-slate-800">Edges (Undirected)</p><p className="mt-1 text-sm text-slate-500">An edge exists when two sessions conflict: same faculty, same room, same section, or same batch at overlapping time.</p></div>
-          <div className="stat-pill-danger"><p className="text-sm text-red-600">Faculty Conflict</p></div>
-          <div className="stat-pill"><p className="text-sm text-honolulu-600">Room Conflict</p></div>
-          <div className="stat-pill-warning"><p className="text-sm text-amber-600">Batch / Section Conflict</p></div>
-          <div className="stat-pill-purple"><p className="text-sm text-amethyst-600">Advanced Note: can be reduced to graph coloring for slot assignment.</p></div>
-        </div>
-      </article>
-
-      <article className="glass-card relative overflow-hidden p-6">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-honolulu-500 to-amethyst-500" />
-        <h2 className="text-2xl font-extrabold text-slate-800">Request Input Mirror</h2>
-        <p className="mt-2 text-sm text-slate-400">These are the same fields used in timetable request/reschedule logic.</p>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-          <input name="subjectName" value={form.subjectName} onChange={updateField} placeholder="Subject" className="input-glass" />
-          <input name="faculty" value={form.faculty} onChange={updateField} placeholder="Faculty" className="input-glass" />
-          <input name="className" value={form.className} onChange={updateField} placeholder="Class" className="input-glass" />
-          <select name="sessionType" value={form.sessionType} onChange={updateField} className="input-glass"><option value="lecture">Lecture</option><option value="lab">Lab</option><option value="tutorial">Tutorial</option></select>
-          {form.sessionType === 'lab' ? <select name="batch" value={form.batch} onChange={updateField} className="input-glass"><option value="A1">A1</option><option value="A2">A2</option><option value="A3">A3</option></select> : <select name="section" value={form.section} onChange={updateField} className="input-glass"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select>}
-          <input name="room" value={form.room} onChange={updateField} placeholder="Room / Lab" className="input-glass" />
-          <select name="day" value={form.day} onChange={updateField} className="input-glass"><option value="Mon">Mon</option><option value="Tue">Tue</option><option value="Wed">Wed</option><option value="Thu">Thu</option><option value="Fri">Fri</option><option value="Sat">Sat</option></select>
-          <input type="time" name="startTime" value={form.startTime} onChange={updateField} className="input-glass" />
-          <input type="time" name="endTime" value={form.endTime} onChange={updateField} className="input-glass" />
-          <label className="flex items-center gap-2 input-glass text-slate-500">Buffer (min)<input type="number" min="0" max="30" value={bufferMinutes} onChange={e => setBufferMinutes(Number(e.target.value) || 0)} className="w-14 rounded-lg border border-honolulu-200 bg-honolulu-50 px-2 py-1 text-sm text-honolulu-600" /></label>
-        </div>
-        <p className="mt-3 text-xs text-slate-400">Detection policy: Same day + time-window intersection with {bufferMinutes} minute turnaround buffer, then resource checks.</p>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button onClick={runSimulation} disabled={loading || !!error || phase === 'scan' || phase === 'link' || phase === 'cycle'} className="btn-brand disabled:opacity-40">Run Visual Check</button>
-          <button onClick={resetVisual} className="btn-secondary">Reset Visual State</button>
-        </div>
-      </article>
-
-      <div className="grid gap-6 lg:grid-cols-[1.55fr_1fr] lg:items-start">
-        <article className="glass-card relative overflow-hidden p-4">
-          <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-honolulu-300 to-transparent" />
-          <div className="mb-3 rounded-xl border border-honolulu-100 bg-honolulu-50/50 p-3 text-xs text-slate-500">Edge labels show conflict reasons between sessions. A graph can have conflicts and still have no cycle.</div>
-          {loading && <div className="p-8 text-center"><div className="inline-block h-8 w-8 rounded-full border-2 border-honolulu-200 border-t-honolulu-500 animate-spin mb-3" /><p className="text-sm font-medium text-honolulu-600">Loading graph from backend...</p></div>}
-          {!!error && <p className="p-8 text-sm font-medium text-red-500">{error}</p>}
-
-          {!loading && !error && (
-            <svg ref={svgRef} viewBox="0 0 1600 1200" className="h-[900px] w-full cursor-move bg-slate-50/50" role="img" aria-label="Real graph lab">
-              <defs>
-                <linearGradient id="lecNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#0EA5E9" /><stop offset="100%" stopColor="#0369A1" /></linearGradient>
-                <linearGradient id="labNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#D97706" /></linearGradient>
-                <linearGradient id="tutNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#8B5CF6" /><stop offset="100%" stopColor="#6D28D9" /></linearGradient>
-                <linearGradient id="reqNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#059669" /></linearGradient>
-                <filter id="labNodeGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              </defs>
-              
-              <g ref={gRef}>
-                {Object.entries(groupCenters || {}).map(([key, center]) => (
-                  <g key={`group-label-${key}`}>
-                    <circle cx={center.x} cy={center.y} r="350" fill="none" stroke="#E2E8F0" strokeWidth="2" strokeDasharray="10 10" opacity="0.3" />
-                    <text x={center.x} y={center.y - 370} textAnchor="middle" fill="#94A3B8" className="text-[24px] font-black uppercase tracking-[0.2em]">{center.label}</text>
-                  </g>
-                ))}
-
-                {edges.map((edge, i) => {
-                  const from = nodePositions[edge.left], to = nodePositions[edge.right]
-                  if (!from || !to) return null
-                  const ek = [edge.left, edge.right].sort().join('|'), isCycle = cycleEdgeSet.has(ek), isConf = edge.type === 'conflict'
-                  return (
-                    <line 
-                      key={`${edge.left}-${edge.right}-${edge.kind}-${i}`} 
-                      x1={from.x} y1={from.y} x2={to.x} y2={to.y} 
-                      stroke={isCycle ? '#EF4444' : isConf ? edgeColorForReasons(edge.reasons) : '#CBD5E1'} 
-                      strokeWidth={isConf ? "8" : "3"} 
-                      strokeDasharray={isConf ? "0" : "8 5"}
-                      opacity={isConf ? "0.9" : "0.2"} 
-                    />
-                  )
-                })}
-
-                {nodes.map(node => {
-                  const pos = nodePositions[node.id], isReq = node.id === 'REQ', inCycle = cycleResult?.cyclePath?.includes(node.id), isAS = activeScanId === node.id
-                  if (!pos) return null
-                  const sType = node.session?.sessionType?.toLowerCase() || 'lecture'
-                  const grad = inCycle ? '#EF4444' : isReq ? 'url(#reqNodeGrad)' : sType === 'lab' ? 'url(#labNodeGrad)' : sType === 'tutorial' ? 'url(#tutNodeGrad)' : 'url(#lecNodeGrad)'
-                  
-                  const sLabel = isReq ? 'REQUEST SLOT' : truncateLabel(node.session.subjectName || 'Session', 20).toUpperCase()
-                  const rLabel = isReq ? `${node.session.room} | ${node.session.day} ${node.session.startTime}` : `${node.session.room} | ${node.session.section ||'N/A'}${node.session.batch || ''}`
-                  const rSize = isReq ? 95 : 80
-                  return (
-                    <g key={node.id} filter="url(#labNodeGlow)" className="node-group transition-transform duration-300">
-                      <circle cx={pos.x} cy={pos.y} r={rSize} fill={grad} stroke={isAS ? '#F59E0B' : '#FFFFFF'} strokeWidth={isAS ? 14 : 5} />
-                      <text x={pos.x} y={pos.y + 7} textAnchor="middle" fill="#fff" className="text-[20px] font-black pointer-events-none tracking-wider">{isReq ? 'REQ' : sType.slice(0, 3).toUpperCase()}</text>
-                      
-                      <g className="pointer-events-none">
-                        <text x={pos.x} y={pos.y + rSize + 32} textAnchor="middle" fill="#0F172A" className="text-[19px] font-black tracking-tight uppercase">{sLabel}</text>
-                        <text x={pos.x} y={pos.y + rSize + 55} textAnchor="middle" fill="#475569" className="text-[16px] font-bold" opacity="0.9">{rLabel}</text>
-                        <text x={pos.x} y={pos.y + rSize + 76} textAnchor="middle" fill="#94A3B8" className="text-[13px] font-mono font-bold tracking-[0.1em]">{node.id}</text>
-                      </g>
-                    </g>
-                  )
-                })}
-              </g>
-            </svg>
-          )}
-        </article>
-
-        <article className="glass-card relative overflow-hidden p-6">
-          <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-amethyst-300 to-transparent" />
-          <h2 className="text-2xl font-extrabold text-slate-800">Live Process + Logs</h2>
-          <p className="mt-2 text-sm text-slate-500">Current phase: <span className="font-semibold uppercase text-honolulu-600">{phase}</span></p>
-
-          <div className="mt-4 space-y-3">
-            {stepStates.map((step, i) => (
-              <div key={step.id} className={`rounded-xl border p-3 transition-all ${step.active ? 'border-honolulu-300 bg-honolulu-50' : step.done ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-slate-50'}`}>
-                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">Step {i + 1}</p>
-                <p className="mt-1 text-sm font-bold text-slate-800">{step.title}</p>
-                <p className="mt-1 text-xs text-slate-400">{step.detail}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 max-h-[300px] space-y-1.5 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-500 font-mono">
-            {!traceLogs.length && <p className="text-slate-400">No logs yet. Click Run Visual Check.</p>}
-            {traceLogs.map((log, i) => <p key={`${log}-${i}`} className="leading-5"><span className="text-honolulu-500">{String(i + 1).padStart(2, '0')}.</span> {log}</p>)}
-          </div>
-
-          {cycleResult && (
-            <div className={`mt-4 rounded-xl border p-3 text-sm ${cycleResult.hasCycle ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'}`}>
-              {cycleResult.hasCycle ? `Cycle detected: ${cycleResult.cyclePath.join(' -> ')}` : 'No cycle detected in the current graph.'}
+        <div className="mt-8 flex flex-wrap justify-center gap-4">
+          {stepStates.map((s, i) => (
+            <div key={s.id} className={`flex items-center gap-3 px-6 py-3 rounded-2xl border-2 transition-all ${s.active ? 'bg-honolulu-600 text-white border-honolulu-700 scale-110 shadow-2xl' : s.done ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-white text-slate-400 border-slate-100'}`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center font-black text-xs ${s.active ? 'bg-white text-honolulu-600' : 'bg-slate-200'}`}>{i + 1}</span>
+              <span className="font-black uppercase tracking-widest text-xs">{s.title}</span>
             </div>
-          )}
-          {!!noCycleInsight && <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-700">Why no cycle: {noCycleInsight}</div>}
-        </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-4">
+        <aside className="lg:col-span-1 space-y-6">
+          <div className="glass-card p-6">
+            <h2 className="text-lg font-black text-slate-800 uppercase mb-4">Slot Settings</h2>
+            <div className="space-y-3">
+              <input name="subjectName" value={form.subjectName} onChange={updateField} placeholder="Subject" className="input-glass text-sm" />
+              <input name="faculty" value={form.faculty} onChange={updateField} placeholder="Faculty" className="input-glass text-sm" />
+              <div className="grid grid-cols-2 gap-2">
+                <input name="venue" value={form.venue} onChange={updateField} placeholder="Room" className="input-glass text-sm" />
+                <select name="day" value={form.day} onChange={updateField} className="input-glass text-sm"><option value="Mon">Mon</option><option value="Tue">Tue</option><option value="Wed">Wed</option><option value="Thu">Thu</option><option value="Fri">Fri</option></select>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input type="time" name="startTime" value={form.startTime} onChange={updateField} className="input-glass text-sm" />
+                <input type="time" name="endTime" value={form.endTime} onChange={updateField} className="input-glass text-sm" />
+              </div>
+              <button onClick={runSimulation} disabled={phase !== 'idle' && phase !== 'done'} className="btn-brand w-full py-4 uppercase font-black tracking-widest mt-2">{phase === 'idle' || phase === 'done' ? 'Initiate Analysis' : 'Processing...'}</button>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 bg-slate-900 text-white border-0 shadow-2xl">
+            <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Discovery Trace</h2>
+            <div className="space-y-2 max-h-[350px] overflow-auto pr-2 scrollbar-hide text-[10px] font-mono leading-relaxed">
+              {!traceLogs.length && <p className="text-slate-600 italic">Waiting for pipeline start...</p>}
+              {traceLogs.map((log, i) => <p key={i} className="border-b border-slate-800 pb-1.5 text-gray-700"><span className="text-gray-900 mr-2">{String(i + 1).padStart(2, '0')}</span>{log}</p>)}
+            </div>
+            {cycleResult && (
+              <div className={`mt-6 p-4 rounded-xl border-l-4 ${cycleResult.hasCycle ? 'bg-red-950/50 border-red-500' : 'bg-emerald-950/50 border-emerald-500'}`}>
+                <p className="text-[10px] uppercase font-black tracking-tighter mb-1">{cycleResult.hasCycle ? 'Structural Impasse' : 'Topology Clear'}</p>
+                {cycleResult.hasCycle && <p className="text-xs font-bold text-red-200">{(cycleResult.path || []).join(' -> ')}</p>}
+                {!cycleResult.hasCycle && <p className="text-xs font-bold text-emerald-200 italic">Conflict graph verified stable.</p>}
+              </div>
+            )}
+          </div>
+        </aside>
+
+        <section className="lg:col-span-3 glass-card relative overflow-hidden bg-slate-50/50 min-h-[900px]">
+          <div className="absolute top-6 left-6 z-10 flex gap-4">
+            <div className="px-4 py-2 bg-white/90 border border-slate-100 rounded-2xl shadow-xl">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Physics State</p>
+              <p className="text-xs font-bold text-slate-800 uppercase">{phase === 'idle' ? 'Sleeping' : 'Neural Active'}</p>
+            </div>
+          </div>
+
+          <svg ref={svgRef} viewBox={`0 0 ${width} ${height}`} className="w-full h-[900px] cursor-move">
+            <defs>
+              <linearGradient id="lecNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#3B82F6" /><stop offset="100%" stopColor="#1D4ED8" /></linearGradient>
+              <linearGradient id="labNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#F59E0B" /><stop offset="100%" stopColor="#B45309" /></linearGradient>
+              <linearGradient id="tutNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#A855F7" /><stop offset="100%" stopColor="#7E22CE" /></linearGradient>
+              <linearGradient id="reqNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#059669" /></linearGradient>
+              <filter id="nodeGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="15" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+            </defs>
+            <g ref={gRef}>
+              {Object.entries(groupCenters || {}).map(([key, center]) => (
+                <g key={key}>
+                  <circle cx={center.x} cy={center.y} r="400" fill="none" stroke="#E2E8F0" strokeWidth="2" strokeDasharray="15 15" opacity="0.2" />
+                  <text x={center.x} y={center.y - 420} textAnchor="middle" fill="#CBD5E1" className="text-3xl font-black tracking-[0.4em] uppercase">{center.label}</text>
+                </g>
+              ))}
+              {baseEdges.slice(0, visibleBaseEdges).map((e, i) => {
+                const s = nodePositions[e.left], t = nodePositions[e.right]
+                if (!s || !t) return null
+                return <line key={i} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke="#CBD5E1" strokeWidth="2" strokeDasharray="10 5" opacity="0.1" />
+              })}
+              {candidateEdges.slice(0, visibleCandidateEdges).map((e, i) => {
+                const s = nodePositions[e.left], t = nodePositions[e.right]
+                if (!s || !t) return null
+                const inC = cycleEdgeSet.has([e.left, e.right].sort().join('|'))
+                return <line key={i} x1={s.x} y1={s.y} x2={t.x} y2={t.y} stroke={inC ? '#EF4444' : '#F43F5E'} strokeWidth={inC ? 16 : 8} className={inC ? "animate-pulse" : ""} strokeLinecap="round" />
+              })}
+              {nodes.map(n => {
+                const p = nodePositions[n.id], isR = n.id === 'REQ', inC = cycleResult?.path?.includes(n.id), isA = activeScanId === n.id
+                if (!p) return null
+                const sT = n.session?.sessionType?.toLowerCase() || 'lecture'
+                const grad = inC ? '#EF4444' : isR ? 'url(#reqNodeGrad)' : sT === 'lab' ? 'url(#labNodeGrad)' : sT === 'tutorial' ? 'url(#tutNodeGrad)' : 'url(#lecNodeGrad)'
+                const rS = isR ? 110 : inC ? 95 : 85
+                return (
+                  <g key={n.id} filter={isA || inC ? "url(#nodeGlow)" : ""}>
+                    <circle cx={p.x} cy={p.y} r={rS} fill={grad} stroke={isA ? '#F59E0B' : inC ? '#000' : '#fff'} strokeWidth={isA ? 20 : 6} className={isA ? "animate-pulse" : ""} />
+                    <text x={p.x} y={p.y + 10} textAnchor="middle" fill="#fff" className="text-2xl font-black">{isR ? 'REQ' : sT.slice(0, 3).toUpperCase()}</text>
+                    <text x={p.x} y={p.y + rS + 40} textAnchor="middle" fill={inC ? '#EF4444' : '#1E293B'} className={`text-xl font-black uppercase tracking-tighter ${inC ? 'animate-bounce' : ''}`}>{isR ? 'REQUEST' : truncateLabel(n.session.subjectName || 'Session', 15).toUpperCase()}</text>
+                    <text x={p.x} y={p.y + rS + 65} textAnchor="middle" fill="#94A3B8" className="text-sm font-bold uppercase tracking-widest">{n.session.room}</text>
+                  </g>
+                )
+              })}
+            </g>
+          </svg>
+        </section>
       </div>
     </section>
   )

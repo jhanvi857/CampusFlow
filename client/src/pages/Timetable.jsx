@@ -1,19 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import SessionCard from '../components/SessionCard'
 import ScheduleRequestForm from '../components/ScheduleRequestForm'
+import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText } from '../services/conflictEngine'
 import { getTimetable } from '../services/api'
 
 const BOOKED_SESSION_STORAGE_KEY = 'campusflow-booked-sessions'
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
-function toMinutes(t){if(!t||!t.includes(':'))return null;const[h,m]=t.split(':');const hh=Number(h),mm=Number(m);return Number.isNaN(hh)||Number.isNaN(mm)?null:hh*60+mm}
-function toTimeLabel(m){return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`}
-function parseLegacy(r){if(!r||typeof r!=='string')return null;const n=r.trim();const m=n.match(/^([A-Za-z]{3})-(\d{1,2})(AM|PM)$/i);if(!m)return null;let h=Number(m[2]);const s=m[3].toUpperCase();if(s==='PM'&&h!==12)h+=12;if(s==='AM'&&h===12)h=0;return{day:m[1],start:h*60,end:h*60+60}}
-function normalizeDay(d){if(!d)return'';const s=String(d).trim().toLowerCase();if(s.startsWith('mon'))return'Mon';if(s.startsWith('tue'))return'Tue';if(s.startsWith('wed'))return'Wed';if(s.startsWith('thu'))return'Thu';if(s.startsWith('fri'))return'Fri';if(s.startsWith('sat'))return'Sat';if(s.startsWith('sun'))return'Sun';return d.substring(0,3)}
-function getSessionWindow(s){const d=normalizeDay(s.day),st=toMinutes(s.startTime),en=toMinutes(s.endTime);if(d&&st!==null&&en!==null)return{day:d,start:st,end:en};const legacy=parseLegacy(s.time);if(legacy)return{...legacy,day:normalizeDay(legacy.day)};return null}
-function sessionsOverlap(a,b){return a.start<b.end&&b.start<a.end}
-function isSameText(a,b){return!a||!b?false:String(a).trim().toLowerCase()===String(b).trim().toLowerCase()}
-function toBookableSession(f){return{id:`CF-${Date.now()}`,subjectName:f.subjectName,subjectCode:f.subjectName,courseCode:f.subjectName,faculty:f.faculty,room:f.venue,className:f.className,section:f.section,batch:f.batch,sessionType:f.sessionType,requestType:f.requestType,day:f.day,startTime:f.startTime,endTime:f.endTime,time:`${f.day} ${f.startTime}-${f.endTime}`}}
+function toBookableSession(f){return{id:`CF-${Date.now()}`,subjectName:f.subjectName,subjectCode:f.subjectName,courseCode:f.subjectName,faculty:f.faculty,room:f.venue,className:f.className,section:f.section,batch:f.batch,sessionType:f.sessionType,requestType:f.requestType,day:f.day,startTime:f.startTime,endTime:f.endTime,isOverride:!!f.isOverride,time:`${f.day} ${f.startTime}-${f.endTime}`}}
 
 function getRoomIssues(roomName, complaints) {
   if (!complaints || !Array.isArray(complaints)) return [];
@@ -25,32 +19,7 @@ function getRoomIssues(roomName, complaints) {
 }
 
 function findConflicts(c, all) {
-  const w = getSessionWindow(c);
-  if (!w) return [];
-  const normalizedWDay = normalizeDay(w.day);
-  
-  return all.filter(s => {
-    const e = getSessionWindow(s);
-    if (!e || normalizeDay(e.day) !== normalizedWDay || !sessionsOverlap(w, e)) return false;
-
-    // Room conflict
-    if (isSameText(c.room, s.room)) return true;
-    // Faculty conflict
-    if (isSameText(c.faculty, s.faculty)) return true;
-
-    // Class and Students conflict logic: 
-    // If it's the same class (e.g., CSE), checks if sections or batches overlap.
-    // Also handles the parent-child relationship: if Section A is busy, all Batches (A1, A2) are busy.
-    // Similarly, if Batch A1 is busy, the whole Section A cannot have an extra lecture.
-    if (isSameText(c.className, s.className)) {
-      if (c.section && s.section && isSameText(c.section, s.section)) return true;
-      if (c.batch && s.batch && isSameText(c.batch, s.batch)) return true;
-      if (c.section && s.batch && s.batch.toLowerCase().startsWith(c.section.toLowerCase())) return true;
-      if (c.batch && s.section && c.batch.toLowerCase().startsWith(s.section.toLowerCase())) return true;
-    }
-
-    return false;
-  });
+  return findConflictsForSession(c, all);
 }
 
 
@@ -133,23 +102,41 @@ function Timetable() {
       };
     }
 
-    // Check for room maintenance issues (Projector, AC, etc.)
-    if (roomIssues.length > 0) {
+    const conflicts = findConflicts(c, allSessions);
+    const hasIssues = roomIssues.length > 0;
+    const hasClashes = conflicts.length > 0;
+
+    // Administrative Override Logic
+    if (c.isOverride) {
+      const warning = hasIssues || hasClashes ? ' (Priority Override Activated)' : '';
+      setBookedSessions(p => [...p, { ...c, hasConflict: hasClashes, hasMaintenanceIssue: hasIssues }]); 
+      return { 
+        ok: true, 
+        message: `Administrative priority slot synchronized successfully${warning}.`, 
+        bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } 
+      };
+    }
+
+    // Standard non-override checks
+    if (hasIssues) {
       const issuesLine = roomIssues.map(i => `${i.category.toUpperCase()}: ${i.title}`).join(' | ');
       return {
         ok: false,
-        message: `Requested room (${c.room}) has active maintenance issues: ${issuesLine}.`,
+        message: `Requested room (${c.room}) has active maintenance issues: ${issuesLine}. Use Priority Override to bypass.`,
         suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints)
       };
     }
 
-    const conflicts = findConflicts(c, allSessions);
-    if (!conflicts.length) { 
-      setBookedSessions(p => [...p, c]); 
-      return { ok: true, message: 'Slot is available. Session has been booked successfully.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
+    if (hasClashes) {
+      return { 
+        ok: false, 
+        message: 'Requested slot is not available due to a scheduling clash. Check Priority Override for urgent faculty requirements.', 
+        suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) 
+      };
     }
     
-    return { ok: false, message: 'Requested slot is not available due to a room, faculty, or section/batch overlap.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) };
+    setBookedSessions(p => [...p, c]); 
+    return { ok: true, message: 'Slot is available. Session has been booked successfully.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
   }
 
   const content = useMemo(() => {

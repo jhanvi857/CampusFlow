@@ -4,7 +4,6 @@ import Home from './pages/Home'
 import Timetable from './pages/Timetable'
 import Conflicts from './pages/Conflicts'
 import Complaints from './pages/Complaints'
-import GraphPlayground from './pages/GraphPlayground'
 import About from './pages/About'
 
 function App() {
@@ -22,7 +21,6 @@ function App() {
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/conflicts" element={<Conflicts />} />
           <Route path="/complaints" element={<Complaints />} />
-          <Route path="/graph-lab" element={<GraphPlayground />} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
