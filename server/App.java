@@ -8,6 +8,7 @@ public class App {
         app.get("/",ctx-> ctx.send("Nioflow is running !"));
         app.get("/timetable", ApiController::getTimetable);
         app.get("/conflicts", ApiController::getConflicts);
+        app.get("/analyze-cycle", ApiController::analyzeCycle);
         app.listen(8080);
     }
 }

@@ -93,4 +93,9 @@ public class GraphService {
 
         return graph;
     }
+
+    public Graph.CycleResult analyzeCycle(List<Session> sessions) {
+        Graph graph = buildConflictGraph(sessions);
+        return graph.findCycle();
+    }
 }

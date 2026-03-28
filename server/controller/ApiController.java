@@ -89,7 +89,35 @@ public class ApiController {
 
     public static void getConflicts(HttpContext ctx) {
         List<Session> sessions = ts.getAllSessions();
-        var conflicts = cs.getConflicts(sessions);
+        Map<String, List<String>> conflicts = cs.getConflicts(sessions);
         ctx.send(conflictsToJson(conflicts));
+    }
+
+    public static void analyzeCycle(HttpContext ctx) {
+        List<Session> sessions = ts.getAllSessions();
+        graph.Graph.CycleResult res = cs.findDeadlocks(sessions);
+        ctx.send(cycleResultToJson(res));
+    }
+
+    private static String cycleResultToJson(graph.Graph.CycleResult res) {
+        StringBuilder json = new StringBuilder("{");
+        json.append("\"hasCycle\":").append(res.hasCycle).append(",");
+        
+        json.append("\"path\":[");
+        for (int i = 0; i < res.path.size(); i++) {
+            json.append("\"").append(jsonEscape(res.path.get(i))).append("\"");
+            if (i < res.path.size() - 1) json.append(",");
+        }
+        json.append("],");
+
+        json.append("\"logs\":[");
+        for (int i = 0; i < res.logs.size(); i++) {
+            json.append("\"").append(jsonEscape(res.logs.get(i))).append("\"");
+            if (i < res.logs.size() - 1) json.append(",");
+        }
+        json.append("]");
+        
+        json.append("}");
+        return json.toString();
     }
 }

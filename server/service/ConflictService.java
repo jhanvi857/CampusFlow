@@ -12,4 +12,9 @@ public class ConflictService {
         Graph g = gs.buildConflictGraph(sessions);
         return g.getGraph();
     }
+
+    public graph.Graph.CycleResult findDeadlocks(List<Session> sessions) {
+        GraphService gs = new GraphService();
+        return gs.analyzeCycle(sessions);
+    }
 }
