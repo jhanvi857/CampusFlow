@@ -4,6 +4,7 @@
 // DATA Communication AND Computer NETWORKS - EICCI24203
 // Ideation AND CONCEPTUALIZATION - ECSAJ24204
 // DISCRETE Mathematics AND GRAPH THEORY - EMABT24202
+//EFfective Technical Communication - ELEAI24201
 package data;
 
 import java.util.ArrayList;
@@ -1299,7 +1300,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S97",
-            "EICCI24204",
+            "",
             "Ideation and Conceptualization",
             "Ms. Rucha Patel",
             "Room 203",
@@ -1327,7 +1328,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S99",
-            "",//subject code
+            "ELEAI24201",
             "Effective Technical Communication",
             "Dr. Pratima Rai",
             "Room 201",
@@ -1384,7 +1385,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S103",
-            "EICCI24204",
+            "",
             "Ideation and Conceptualization",
             "Ms. Rucha Patel",
             "Room 203",
@@ -1398,10 +1399,10 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S104",
-            "",// subject code
+            "ELEAI24201",
             "Effective Technical Communication",
             "Ms. Ashita Thakur",
-            "",//room
+            "CS Lab",
             "ICT",
             "Lab",
             "",
