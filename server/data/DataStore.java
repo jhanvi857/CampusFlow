@@ -1607,6 +1607,119 @@ public class DataStore {
             "13:30",
             "15:10"
         ));
+        //Friday ICT B
+        sessions.add(new Session(
+            "S119",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Ritu Patel",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Friday",
+            "09:10",
+            "10:00"
+        ));
+        sessions.add(new Session(
+            "S120",
+            "EMABT24202",
+            "Microcontroller and Embedded System",
+            "Dr. Vishal Pandey",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Friday",
+            "10:00",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "S121",
+            "EMABT24202",
+            "Microcontroller and Embedded System",
+            "Dr. Vishal Pandey",
+            "MP Lab",
+            "ICT",
+            "Lab",
+            "",
+            "B3",
+            "Friday",
+            "11:00",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "S122",
+            "",
+            "Effective Technical Communication",
+            "Ms. Ashita Thakur",
+            "Lab 203",
+            "ICT",
+            "Lab",
+            "",
+            "B2",
+            "Friday",
+            "11:00",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "S123",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Mr. Parth Lakkad",
+            "Lab 302",
+            "ICT",
+            "Lab",
+            "",
+            "B1",
+            "Friday",
+            "11:00",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "S124",
+            "EMABT24202",
+            "Microcontroller and Embedded System",
+            "Dr. Vishal Pandey",
+            "MP Lab",
+            "ICT",
+            "Lab",
+            "",
+            "B1",
+            "Friday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "S125",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Mr. Parth Lakkad",
+            "Lab 202",
+            "ICT",
+            "Lab",
+            "",
+            "B3",
+            "Friday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "S126",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Ritu Patel",
+            "LAb 402",
+            "ICT",
+            "Lab",
+            "",
+            "B2",
+            "Friday",
+            "13:30",
+            "15:10"
+        ));
         return sessions;
     }
 }
