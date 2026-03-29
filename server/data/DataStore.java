@@ -4,7 +4,7 @@
 // DATA Communication AND Computer NETWORKS - EICCI24203
 // Ideation AND CONCEPTUALIZATION - ECSAJ24204
 // DISCRETE Mathematics AND GRAPH THEORY - EMABT24202
-//EFfective Technical Communication - ELEAI24201
+// EFfective Technical Communication - ELEAI24201
 package data;
 
 import java.util.ArrayList;
@@ -1254,7 +1254,7 @@ public class DataStore {
                 "Fri",
                 "13:30",
                 "15:10"));
-        //===================================================== ICT A ============================================
+        //===================================================== ICT B ============================================
         //Monday ICT B
         sessions.add(new Session(
             "S94",
@@ -1439,6 +1439,106 @@ public class DataStore {
             "13:30",
             "15:10"
         ));
+        //Wednesday ICT B
+        sessions.add(new Session(
+            "S107",
+            "EMABT24202",
+            "Microcontroller and Embedded System",
+            "Dr. Vishal Pandey",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Wednesday",
+            "09:10",
+            "10:00"
+        ));
+        sessions.add(new Session(
+            "S108",
+            "EMABT24202",
+            "Discrete Mathematics and Graph Theory",
+            "Dr. Sougata Mandal",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Wednesdayday",
+            "10:00",
+            "10:50"
+        ));
+        sessions.add(new Session(
+            "S109",
+            "ECSCI24203",
+            "Operating System",
+            "Dr. Ritu Patel",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Wednesday",
+            "11:00",
+            "11:50"
+        ));
+        sessions.add(new Session(
+            "S110",
+            "ECSCI24204",
+            "Object Oriented Programming",
+            "Dr. Abhay Sharma",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Wednesday",
+            "11:50",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "S111",
+            "ELEAI24201",
+            "Effective Technical Communication",
+            "Mr. Mahendra Valand",
+            "CS Lab",
+            "ICT",
+            "Lab",
+            "",
+            "B1",
+            "Wednesday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "S112",
+            "ECSCI24203",
+            "Operating System",
+            "Ms. Nidhi Acharya",
+            "Lab 402",
+            "ICT",
+            "Lab",
+            "",
+            "B3",
+            "Wednesday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "S113",
+            "EMABT24202",
+            "Microcontroller and Embedded System",
+            "Dr. Vishal Pandey",
+            "MP Lab",
+            "ICT",
+            "Lab",
+            "",
+            "B2",
+            "Tuesday",
+            "13:30",
+            "15:10"
+        ));
+        //Thursday ICT B
         return sessions;
     }
 }
