@@ -1720,6 +1720,490 @@ public class DataStore {
             "13:30",
             "15:10"
         ));
+        // Monday ICT A
+        sessions.add(new Session(
+                "S127",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Monday",
+                "09:10",
+                "10:00"));
+        sessions.add(new Session(
+                "S128",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Vandana Maurya",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Monday",
+                "10:00",
+                "10:50"));
+        sessions.add(new Session(
+                "S129",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Monday",
+                "11:00",
+                "11:50"));
+        sessions.add(new Session(
+                "S130",
+                "",
+                "Carrier Development Cell",
+                "",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Monday",
+                "12:40",
+                "13:30"));
+        // Afternoon Labs (Merged slots)
+        sessions.add(new Session(
+                "S131",
+                "ELEAI24201",
+                "Effective Technical Communication",
+                "Mr. Himanshu Parmar",
+                "CS Lab",
+                "ICT",
+                "Lab",
+                "",
+                "A3",
+                "Monday",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S132",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Mr. Parth Lakkad",
+                "Lab 2B",
+                "ICT",
+                "Lab",
+                "",
+                "A2",
+                "Monday",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S133",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Lab 4C",
+                "ICT",
+                "Lab",
+                "",
+                "A1",
+                "Monday",
+                "13:30",
+                "15:10"));
+        
+        // Tuesday ICT A
+        sessions.add(new Session(
+                "S134",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Tuesday",
+                "10:00",
+                "10:50"));
+        sessions.add(new Session(
+                "S135",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Abhay Sharma",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Tuesday",
+                "11:00",
+                "11:50"));
+        // Morning Tutorial
+        sessions.add(new Session(
+                "S136",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Vandana Maurya",
+                "Room 301",
+                "ICT",
+                "Tutorial",
+                "",
+                "A1",
+                "Tuesday",
+                "12:40",
+                "13:30"));
+        // Afternoon Labs
+        sessions.add(new Session(
+                "S137",
+                "ELEAI24201",
+                "Effective Technical Communication",
+                "Mr. Himanshu Parmar",
+                "Lab 2A",
+                "ICT",
+                "Lab",
+                "",
+                "A1",
+                "Tuesday",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S138",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Lab 4C",
+                "ICT",
+                "Lab",
+                "",
+                "A2",
+                "Tuesday",
+                "13:30",
+                "15:10"));
+        sessions.add(new Session(
+                "S139",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "MP Lab",
+                "ICT",
+                "Lab",
+                "",
+                "A3",
+                "Tuesday",
+                "13:30",
+                "15:10"));
+                // Late Lab
+        sessions.add(new Session(
+                "S140",
+                "ECSAJ24204",
+                "Ideation and Conceptualization",
+                "Ms. Rucha Patel",
+                "Lab",
+                "ICT",
+                "Lab",
+                "",
+                "A3",
+                "Tuesday",
+                "15:30",
+                "17:10"));
+
+        // Wednesday ICT A
+        sessions.add(new Session(
+                "S141",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Wednesday",
+                "09:10",
+                "10:00"));
+
+        sessions.add(new Session(
+                "S142",
+                "ELEAI24201",
+                "Effective Technical Communication",
+                "Dr. Pratima Rai",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Wednesday",
+                "10:00",
+                "10:50"));
+
+        sessions.add(new Session(
+                "S143",
+                "ELEAI24201",
+                "Effective Technical Communication",
+                "Mr. Himanshu Parmar",
+                "CS Lab",
+                "ICT",
+                "Lab",
+                "",
+                "A2",
+                "Wednesday",
+                "11:00",
+                "12:40"));
+
+        sessions.add(new Session(
+                "S144",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Mr. Parth Lakkad",
+                "Lab 2B",
+                "ICT",
+                "Lab",
+                "",
+                "A3",
+                "Wednesday",
+                "11:00",
+                "12:40"));
+
+        sessions.add(new Session(
+                "S145",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "MP Lab",
+                "ICT",
+                "Lab",
+                "",
+                "A1",
+                "Wednesday",
+                "11:00",
+                "12:40"));
+
+        sessions.add(new Session(
+                "S146",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Wednesday",
+                "13:30",
+                "14:20"));
+
+        sessions.add(new Session(
+                "S147",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Mr. Mitesh Bhavsar",
+                "Room 301",
+                "ICT",
+                "Tutorial",
+                "",
+                "A3",
+                "Wednesday",
+                "14:20",
+                "15:10"));
+
+        sessions.add(new Session(
+                "S148",
+                "ECSAJ24204",
+                "Ideation and Conceptualization",
+                "Ms. Rucha Patel",
+                "Room 301",
+                "ICT",
+                "Lab",
+                "",
+                "A2",
+                "Wednesday",
+                "15:30",
+                "17:10"));
+        // Thursday ICT A
+        sessions.add(new Session(
+                "S149",
+                "ELEAI24201",
+                "Effective Technical Communication",
+                "Dr. Pratima Rai",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Thursday",
+                "09:10",
+                "10:00"));
+
+        sessions.add(new Session(
+                "S150",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Thursday",
+                "10:00",
+                "10:50"));
+
+        sessions.add(new Session(
+                "S151",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Vandana Maurya",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Thursday",
+                "11:00",
+                "11:50"));
+
+        sessions.add(new Session(
+                "S152",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Abhay Sharma",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Thursday",
+                "12:40",
+                "13:30"));
+
+        sessions.add(new Session(
+                "S153",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Lab 4C",
+                "ICT",
+                "Lab",
+                "",
+                "A3",
+                "Thursday",
+                "13:30",
+                "15:10"));
+
+        sessions.add(new Session(
+                "S154",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Mr. Parth Lakkad",
+                "Lab 2B",
+                "ICT",
+                "Lab",
+                "",
+                "A1",
+                "Thursday",
+                "13:30",
+                "15:10"));
+
+        sessions.add(new Session(
+                "S155",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "MP Lab",
+                "ICT",
+                "Lab",
+                "",
+                "A2",
+                "Thursday",
+                "13:30",
+                "15:10"));
+        // Friday ICT A
+        sessions.add(new Session(
+                "S156",
+                "ECSCI24203",
+                "Object Oriented Programming with Java",
+                "Dr. Abhay Sharma",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Friday",
+                "09:10",
+                "10:00"));
+
+        sessions.add(new Session(
+                "S157",
+                "EMABT24202",
+                "Microcontroller and Embedded System",
+                "Dr. Krupa Punit",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Friday",
+                "10:00",
+                "10:50"));
+
+        sessions.add(new Session(
+                "S158",
+                "ECSCI24204",
+                "Operating System",
+                "Dr. Spoorthy V",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Friday",
+                "11:00",
+                "11:50"));
+
+        sessions.add(new Session(
+                "S159",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Mr. Mitesh Bhavsar",
+                "Room 201",
+                "ICT",
+                "Tutorial",
+                "",
+                "A2",
+                "Friday",
+                "12:40",
+                "14:20"));
+
+        sessions.add(new Session(
+                "S160",
+                "ECSAJ24204",
+                "Ideation and Conceptualization",
+                "Ms. Rucha Patel",
+                "Room 301",
+                "ICT",
+                "Lab",
+                "",
+                "A1",
+                "Friday",
+                "12:40",
+                "14:20"));
+
+        sessions.add(new Session(
+                "S161",
+                "EMABT24202",
+                "Discrete Mathematics and Graph Theory",
+                "Dr. Vandana Maurya",
+                "Room 301",
+                "ICT",
+                "Lecture",
+                "A",
+                "",
+                "Friday",
+                "14:20",
+                "15:10"));
         return sessions;
     }
 }
