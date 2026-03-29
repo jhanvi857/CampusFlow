@@ -757,7 +757,7 @@ public class DataStore {
                 "14:20"));
         sessions.add(new Session(
                 "S57",
-                "EICCI24204",
+                "ECSAJ24204",
                 "Ideation and Conceptualization",
                 "Mr. Partho Mukherjee",
                 "Lab", 
@@ -823,7 +823,7 @@ public class DataStore {
                 "14:20"));
         sessions.add(new Session(
                 "S62",
-                "EICCI24204",
+                "ECSAJ24204",
                 "Ideation and Conceptualization",
                 "Mr. Devarshi Oza",
                 "Lab",
@@ -1121,7 +1121,7 @@ public class DataStore {
                 "12:40"));
         sessions.add(new Session(
                 "S84",
-                "EICCI24204",
+                "ECSAJ24204",
                 "Ideation and Conceptualization",
                 "Dr. Alok Kumar Singh",
                 "Room 203",
@@ -1148,7 +1148,7 @@ public class DataStore {
                 "15:10"));
         sessions.add(new Session(
                 "S86",
-                "EICCI24204",
+                "ECSAJ24204",
                 "Ideation and Conceptualization",
                 "Dr. Alok Kumar Singh",
                 "Lab",
@@ -1243,7 +1243,7 @@ public class DataStore {
                 "15:10"));
         sessions.add(new Session(
                 "S93",
-                "EICCI24204",
+                "ECSAJ24204",
                 "Ideation and Conceptualization",
                 "Dr. Alok Kumar Singh",
                 "Lab",
@@ -1300,7 +1300,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S97",
-            "",
+            "ECSAJ24204",
             "Ideation and Conceptualization",
             "Ms. Rucha Patel",
             "Room 203",
@@ -1314,7 +1314,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S98",
-            "",
+            "ECSCI24204",
             "Object Oriented Programming with Java",
             "Dr. Abhay Sharma",
             "Room 201",
@@ -1385,7 +1385,7 @@ public class DataStore {
         ));
         sessions.add(new Session(
             "S103",
-            "",
+            "ECSAJ24204",
             "Ideation and Conceptualization",
             "Ms. Rucha Patel",
             "Room 203",
