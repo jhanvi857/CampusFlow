@@ -1,337 +1,146 @@
-# CampusFlow
+# CampusFlow: Academic Operations Intelligence
 
-CampusFlow is a full-stack academic operations platform focused on timetable visibility, scheduling conflict detection, slot request simulation, and campus complaint routing. The project combines a React frontend with a lightweight Java backend and uses graph modeling to represent timetable clashes across faculty, rooms, sections, and lab batches.
+CampusFlow is an enterprise grade academic operations platform designed for timetable optimization, scheduling conflict diagnostics, and campus infrastructure management. The system utilizes graph theory to model relationships between faculty, rooms, and student batches, ensuring a collision free academic environment.
 
-## Overview
+## Executive Summary
 
-The system helps academic coordinators, faculty, and students understand how timetable decisions affect shared campus resources. It provides:
+The platform provides a unified interface for three core academic stakeholders:
 
-- A timetable dashboard for viewing sessions
-- A request flow for extra lectures and rescheduling
-- Graph-based conflict detection across overlapping sessions
-- A visual graph lab to explain how nodes, edges, and cycles are formed
-- A complaint center for routing campus infrastructure issues to the right team
+1. **Academic Coordinators**: Utilize the Diagnostic Audit Center for topological resource mapping and conflict resolution.
+2. **Faculty**: Manage session scheduling with real time clash detection and administrative overrides.
+3. **Students**: Access personalized timetable boards filtered by course, year, section, and laboratory batch.
 
-## Key Features
+## Core Capabilities
 
-- Timetable browser with search, day filters, and session-type filters
-- Slot booking simulation with local persistence in the browser
-- Automatic clash detection for faculty, room, section, and batch overlap
-- Alternative slot suggestions when the requested slot is unavailable
-- Conflict graph view generated from backend data
-- Graph playground with request-node injection and DFS cycle detection trace
-- Complaint submission workflow with owner team, escalation team, SLA, and status tracking
+### Role Based Access Control (RBAC)
+The system implements a session based authentication model separating administrative scheduling authority from student read-only personalized views.
 
-## Tech Stack
+- **Faculty Role**: Full authority to arrange extra lectures, perform administrative overrides, and manage the campus complaint lifecycle.
+- **Student Role**: Personalized dashboard experience centered on the student's specific academic profile: Degree, Course (e.g., CSE, ICT), Year, Section, and Lab Batch.
 
-### Frontend
+### Diagnostic Audit Center
+A network level visualization tool that maps scheduling requests as nodes in an undirected graph. Conflicts are represented as edges when sessions overlap in time or share restricted resources.
 
-- React 19
-- React Router
-- Vite
-- Tailwind CSS
-
-### Backend
-
-- Java
-- NioFlow framework
-- Manual JSON response generation
+### Campus Operations Hub
+A reporting and tracking system for infrastructure maintenance. It features automated routing based on issue category, Service Level Agreement (SLA) tracking, and escalation path management.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    U[User] --> F[React Frontend]
-
-    subgraph Client["client/"]
-        F --> R[Pages and Components]
-        R --> S[services/api.js]
-        R --> L1[localStorage<br/>booked sessions]
-        R --> L2[localStorage<br/>complaints]
+graph TD
+    User((User)) --> Client[React Frontend]
+    
+    subgraph ClientLayer [Client Side]
+        Client --> Auth[Auth Context / RBAC]
+        Client --> Store[Local Storage Persistence]
+        Auth --> StudentBoard[Personalized Timetable]
+        Auth --> AdminTools[Scheduling Engine]
     end
 
-    S -->|GET /api/timetable| A[Java API Controller]
-    S -->|GET /api/conflicts| A
+    ClientLayer -- "API Calls" --> Server[Java Backend]
 
-    subgraph Server["server/"]
-        A --> T[TimetableService]
-        A --> C[ConflictService]
-        T --> D[DataStore]
-        C --> G[GraphService]
-        G --> H[Graph]
-        D --> M[Session Model]
+    subgraph ServerLayer [Server Side]
+        Server --> API[ApiController]
+        API --> ConflictSvc[Conflict Graph Service]
+        API --> TimetableSvc[Timetable Service]
+        ConflictSvc --> GraphModel[Adjacency List Graph]
+        TimetableSvc --> DataStore[In Memory Session Store]
     end
 ```
 
-## Working Flow
+## Stakeholder Workflows
+
+### Student Personalization Engine
+Students provide their academic profile during authentication. The system then applies a multi-dimensional filtering algorithm to the global master schedule.
+
+```mermaid
+flowchart LR
+    Start([User Login]) --> Input[Enter Course, Section, Batch]
+    Input --> Logic{Filtering Engine}
+    Logic -->|Match Course| C[Filter by Subject]
+    Logic -->|Match Section| S[Filter by Group]
+    Logic -->|Match Batch| B[Filter by Lab]
+    C & S & B --> Render[Render Personalized Board]
+```
+
+### Scheduling & Conflict Trace
+When a faculty member requests a new session, the engine performs a deep trace against the existing graph topology.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant UI as React UI
-    participant API as API Service
-    participant Server as Java Backend
-    participant Graph as Graph Logic
-
-    User->>UI: Open timetable or conflicts page
-    UI->>API: Request data
-    API->>Server: GET /timetable or /conflicts
-    Server->>Server: Load sessions from DataStore
-    alt Timetable request
-        Server-->>API: Session list JSON
-        API-->>UI: Timetable data
-        UI-->>User: Render timetable cards and filters
-    else Conflict request
-        Server->>Graph: Build conflict graph
-        Graph->>Graph: Check time overlap and shared resources
-        Graph-->>Server: Adjacency map
-        Server-->>API: Conflict JSON
-        API-->>UI: Conflict graph data
-        UI-->>User: Render graph and summaries
+    participant F as Faculty
+    participant E as Conflict Engine
+    participant G as Graph Topology
+    
+    F->>E: Submit Slot Request
+    E->>G: Scan for Resource Overlaps
+    alt No Conflicts
+        G-->>E: Validation Success
+        E-->>F: Confirm Booking
+    else Resource Collision
+        G-->>E: Identify Edge Clashes (Room/Faculty/Class)
+        E-->>F: Provide Alternative Slot Suggestions
     end
 ```
 
-## Conflict Detection Logic
+## Conflict Detection Parameters
 
-CampusFlow models each session as a graph node. An undirected relationship exists between two sessions when:
+The system identifies a conflict between two sessions if they occur on the same day, have overlapping time windows, and meet any of the following criteria:
 
-- They occur on the same day
-- Their time windows overlap
-- At least one shared resource conflicts
+- **Faculty Level**: The same instructor is assigned to concurrent sessions.
+- **Venue Level**: The same room or laboratory is booked for simultaneous use.
+- **Group Level**: The same student section or specific lab batch is required in two locations at once.
 
-The current backend checks these conflict conditions:
+## Technical Implementation
 
-- Same faculty member
-- Same room
-- Same class and same section
-- Same class and same batch
+### Frontend
+- **Framework**: React 19 with Vite for high performance rendering.
+- **Styling**: Vanilla CSS utilizing a glassmorphism design system for a premium aesthetic.
+- **State Management**: Context API for authentication and RBAC.
+- **Persistence**: Browser LocalStorage for session metadata and user profiles.
 
-This logic is implemented in `server/graph/GraphService.java`.
+### Backend
+- **Language**: Java.
+- **Web Framework**: NioFlow (Lightweight NIO based server).
+- **Data Model**: Adjacency list representation for conflict relationships.
 
-## Project Structure
+## Directory Structure
 
 ```text
 DMGTProject/
-|-- client/
-|   |-- src/
-|   |   |-- components/
-|   |   |-- pages/
-|   |   `-- services/
-|   |-- public/
-|   `-- package.json
-|-- server/
-|   |-- controller/
-|   |-- data/
-|   |-- graph/
-|   |-- model/
-|   |-- service/
-|   |-- lib/
-|   |-- App.java
-|   `-- run.ps1
-`-- README.md
+├── client/                # React Frontend Application
+│   ├── src/
+│   │   ├── components/    # Reusable UI Patterns
+│   │   ├── context/       # Auth and RBAC State
+│   │   ├── pages/         # Dashboard and Audit Views
+│   │   └── services/      # API Communication Layer
+│   └── public/            # Static Assets
+└── server/                # Java Backend Application
+    ├── controller/        # API Endpoints
+    ├── graph/             # Conflict Detection Logic
+    ├── model/             # Session and Graph Nodes
+    └── service/           # Business Logic Layer
 ```
 
-## Main Modules
+## Getting Started
 
-### Frontend Modules
-
-- `Home`: landing page and feature entry points
-- `Timetable`: displays sessions, filters data, and processes slot requests
-- `Conflicts`: visualizes backend-generated conflict relationships
-- `GraphPlayground`: demonstrates graph construction and cycle detection
-- `Complaints`: manages complaint creation, routing, and status updates
-- `About`: explains project intent and future production direction
-
-### Backend Modules
-
-- `App.java`: starts the NioFlow server on port `8080`
-- `ApiController`: exposes `/timetable` and `/conflicts`
-- `TimetableService`: returns session data from the data layer
-- `ConflictService`: builds the conflict graph for current sessions
-- `DataStore`: provides in-memory sample timetable data
-- `GraphService`: implements overlap and conflict rules
-- `Graph`: stores adjacency lists for session conflicts
-- `Session`: core timetable entity
-
-## API Endpoints
-
-### `GET /`
-
-Health response:
-
-```text
-Nioflow is running !
-```
-
-### `GET /timetable`
-
-Returns an array of timetable sessions.
-
-Example response:
-
-```json
-[
-  {
-    "id": "1",
-    "subjectCode": "CS101",
-    "courseCode": "CS101",
-    "subjectName": "Operating systems",
-    "faculty": "Hitesh chhikniwala",
-    "room": "Room 305",
-    "className": "CSE",
-    "sessionType": "lecture",
-    "section": "A",
-    "batch": "",
-    "day": "Mon",
-    "startTime": "09:10",
-    "endTime": "10:00",
-    "time": "Mon 09:10-10:00"
-  }
-]
-```
-
-### `GET /conflicts`
-
-Returns a graph adjacency map keyed by session id.
-
-Example response:
-
-```json
-{
-  "1": ["4", "5"],
-  "4": ["1"]
-}
-```
-
-## Frontend Feature Workflow
-
-```mermaid
-flowchart TD
-    A[User opens Timetable page] --> B[Frontend fetches base sessions]
-    B --> C[User submits extra or reschedule request]
-    C --> D[Convert form input into candidate session]
-    D --> E[Compare candidate with all sessions]
-    E --> F{Conflict found?}
-    F -->|No| G[Book session in localStorage]
-    F -->|Yes| H[Generate alternative slot suggestions]
-    G --> I[Updated timetable rendered]
-    H --> J[Suggestions shown to user]
-```
-
-## Graph Lab Workflow
-
-```mermaid
-flowchart TD
-    A[Load timetable sessions] --> B[Build base graph edges]
-    B --> C[Create request node REQ]
-    C --> D[Scan REQ against existing sessions]
-    D --> E[Add conflict edges from REQ]
-    E --> F[Run DFS cycle detection]
-    F --> G[Show logs, conflicts, and cycle result]
-```
-
-## Complaint Routing Workflow
-
-```mermaid
-flowchart TD
-    A[User submits complaint] --> B[Select category]
-    B --> C[Map category to owner team]
-    C --> D[Assign escalation team and SLA]
-    D --> E[Store complaint in localStorage]
-    E --> F[Track status: open, in-review, assigned, resolved]
-```
-
-## How To Run
-
-### Prerequisites
-
-- Node.js and npm
-- Java JDK with `javac`
-- PowerShell on Windows
-
-### 1. Start the backend
-
-From the project root:
-
+### Backend Setup
+Execute the following commands from the root directory to initiate the Java server:
 ```powershell
 Set-Location .\server
 .\run.ps1
 ```
+The server will initialize on `http://localhost:8080`.
 
-The backend starts on `http://localhost:8080`.
-
-### 2. Start the frontend
-
-Open another terminal:
-
+### Frontend Setup
+Initiate the development server:
 ```powershell
 Set-Location .\client
 npm install
 npm run dev
 ```
+The application will be accessible via the localized Vite proxy.
 
-The frontend runs through Vite. During development, requests to `/api/*` are proxied to `http://localhost:8080`.
+## Project Vision
 
-## Example User Journeys
-
-### Timetable and Slot Request
-
-1. Open the timetable page
-2. Review current sessions and filters
-3. Submit an extra lecture or reschedule request
-4. System checks for room, faculty, section, and batch conflicts
-5. If free, the slot is booked locally
-6. If blocked, alternative slots are suggested
-
-### Conflict Visualization
-
-1. Open the conflicts page
-2. Frontend requests the backend conflict graph
-3. Backend builds adjacency relationships from session overlap rules
-4. Frontend renders graph nodes and conflict summaries
-
-### Complaint Management
-
-1. Submit a complaint with category, location, and severity
-2. System assigns owner team and escalation path
-3. Complaint is stored in browser state
-4. Status can be updated through its resolution lifecycle
-
-## Current Data and Persistence Model
-
-- Timetable session seed data currently comes from `server/data/DataStore.java`
-- Booked timetable requests are stored in browser `localStorage`
-- Complaints are stored in browser `localStorage`
-- The current version is suitable for demonstration, academic presentation, and algorithm explanation
-
-## Limitations
-
-- No database integration yet
-- No authentication or role-based access control
-- No backend persistence for requests or complaints
-- No POST endpoints for timetable changes or complaint creation
-- Conflict data is based on in-memory session seed data
-- JSON is manually constructed in the backend rather than serialized through a library
-
-## Future Improvements
-
-- Add a database for timetable, booking, and complaint persistence
-- Expose POST and PUT APIs for booking and complaint workflows
-- Add user roles for admin, faculty, student, and operations staff
-- Add notification workflows for escalations and approvals
-- Add graph coloring or optimization algorithms for automated slot allocation
-- Add analytics dashboards for utilization, conflict density, and SLA compliance
-
-## Academic Value
-
-This project demonstrates practical use of:
-
-- Graph representation using adjacency lists
-- Resource conflict detection based on interval overlap
-- DFS-based cycle detection
-- Full-stack integration between UI and backend services
-- Applied campus scheduling and operations modeling
-
-## Conclusion
-
-CampusFlow is more than a timetable viewer. It is a graph-aware academic operations prototype that connects scheduling intelligence, conflict explainability, and operational complaint routing in one interface. The current implementation is well suited for demonstrations, coursework, and future extension into a production-ready campus platform.
+CampusFlow transitions traditional timetable management from a static viewing experience to a dynamic, graph-aware decision platform. By centralizing conflict intelligence and infrastructure reporting, the platform ensures that academic operations are both visible and optimized across the entire campus ecosystem.
