@@ -14,8 +14,7 @@ import model.Session;
 public class DataStore {
     public static List<Session> getSessions() {
         List<Session> sessions = new ArrayList<>();
-        // ============================================================ CSE A
-        // =================================================================
+// ============================================================ CSE A =================================================================
         // Monday TimeTable CSE A
         sessions.add(new Session(
                 "S1",
@@ -425,7 +424,7 @@ public class DataStore {
                 "13:30",
                 "15:10"));
 
-        // =================================================================CSE B ========================
+// ================================================================= CSE B =======================================================
         // Monday TimeTable CSE B
         sessions.add(new Session(
                 "S32",
@@ -834,7 +833,7 @@ public class DataStore {
                 "Fri",
                 "12:40",
                 "14:20"));
-        //================================================== CSE C ===========================================
+//=================================================================== CSE C =======================================================================
         // Monday CSE C
         sessions.add(new Session(
                 "S63",
@@ -1064,20 +1063,6 @@ public class DataStore {
                 "Wed",
                 "11:50",
                 "12:40"));
-        sessions.add(new Session(
-                "S80",
-                "EMABT24202", // Kept course code consistent with your previous CDC entry
-                "Carrier Development Cell",
-                "",
-                "Room 203",
-                "CSE",
-                "Lecture",
-                "C",
-                "",
-                "Wed",
-                "13:30",
-                "14:20"));
-
         // Thursday CSE C
         sessions.add(new Session(
                 "S81",
@@ -1254,7 +1239,7 @@ public class DataStore {
                 "Fri",
                 "13:30",
                 "15:10"));
-        //===================================================== ICT B ============================================
+//====================================================================== ICT B =============================================================
         //Monday ICT B
         sessions.add(new Session(
             "S94",
@@ -1534,11 +1519,94 @@ public class DataStore {
             "Lab",
             "",
             "B2",
-            "Tuesday",
+            "Wednesday",
             "13:30",
             "15:10"
         ));
         //Thursday ICT B
+        sessions.add(new Session(
+            "S114",
+            "EMABT24202",
+            "Microcontroller and Embedded System",
+            "Dr. Vishal Pandey",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Thursday",
+            "09:10",
+            "10:00"
+        ));
+        sessions.add(new Session(
+            "S115",
+            "ECSCI24203",
+            "Object Oriented Programming with Java",
+            "Dr. Abhay Sharma",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Thursday",
+            "10:00",
+            "10:50"
+        ));sessions.add(new Session(
+            "S116",
+            "ECSCI24204",
+            "Operating System",
+            "Dr. Ritu Patel",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Thursday",
+            "11:00",
+            "11:50"
+        ));
+        sessions.add(new Session(
+            "S116",
+            "",
+            "Effective Technical Communication",
+            "Dr. Pratima Rai",
+            "Room 201",
+            "ICT",
+            "Lecture",
+            "B",
+            "",
+            "Thursday",
+            "11:50",
+            "12:40"
+        ));
+        sessions.add(new Session(
+            "S117",
+            "",
+            "Discrete Mathematics and Grapph Theory",
+            "Dr. Vandana Maurya",
+            "Room 303A",
+            "ICT",
+            "Tutorial",
+            "",
+            "B3",
+            "Thursday",
+            "13:30",
+            "15:10"
+        ));
+        sessions.add(new Session(
+            "S118",
+            "",
+            "Ideation and Conceptualization",
+            "Ms. Rucha Patel",
+            "Room 201",
+            "ICT",
+            "Lab",
+            "",
+            "B2",
+            "Thursday",
+            "13:30",
+            "15:10"
+        ));
         return sessions;
     }
 }
