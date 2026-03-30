@@ -305,3 +305,38 @@ select.input-glass option {
 .delay-3 { animation-delay: 0.3s; }
 .delay-4 { animation-delay: 0.4s; }
 .delay-5 { animation-delay: 0.5s; }
+
+/* ── Notification dropdown animation ── */
+.animate-in-notification {
+  animation: notifDropIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes notifDropIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ── Subtle bounce for notification badge ── */
+@keyframes subtleBounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.animate-bounce-subtle {
+  animation: subtleBounce 2s ease-in-out infinite;
+}
+
+/* ── Line clamp ── */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

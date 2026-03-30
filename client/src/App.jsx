@@ -1,10 +1,12 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { NotificationProvider } from './context/NotificationContext'
 import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Timetable from './pages/Timetable'
 import Conflicts from './pages/Conflicts'
 import Complaints from './pages/Complaints'
+import Notifications from './pages/Notifications'
 import About from './pages/About'
 import Login from './pages/Login'
 
@@ -36,6 +38,7 @@ function AppContent() {
           <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
           <Route path="/conflicts" element={<ProtectedRoute><Conflicts /></ProtectedRoute>} />
           <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -60,7 +63,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationProvider>
+        <AppContent />
+      </NotificationProvider>
     </AuthProvider>
   )
 }

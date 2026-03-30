@@ -4,6 +4,7 @@ import ScheduleRequestForm from '../components/ScheduleRequestForm'
 import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText } from '../services/conflictEngine'
 import { getTimetable } from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useNotifications } from '../context/NotificationContext'
 
 const BOOKED_SESSION_STORAGE_KEY = 'campusflow-booked-sessions'
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -54,6 +55,7 @@ function normalizeTimetablePayload(p){if(Array.isArray(p))return p;if(p&&Array.i
 
 function Timetable() {
   const { user } = useAuth()
+  const { sendNotification } = useNotifications()
   const [sessions, setSessions] = useState([])
   const [bookedSessions, setBookedSessions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -154,8 +156,25 @@ function Timetable() {
 
     if (c.isOverride) {
       const warning = hasIssues || hasClashes ? ' (Priority Override Activated)' : '';
-      setBookedSessions(p => [...p, { ...c, hasConflict: hasClashes, hasMaintenanceIssue: hasIssues }]); 
-      return { ok: true, message: `Administrative priority slot synchronized successfully${warning}.`, bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
+      setBookedSessions(p => [...p, { ...c, hasConflict: hasClashes, hasMaintenanceIssue: hasIssues }]);
+      // Send notification to students
+      sendNotification({
+        type: c.requestType === 'reschedule' ? 'reschedule' : 'extra',
+        faculty: c.faculty,
+        subjectName: c.subjectName,
+        className: c.className,
+        section: c.section,
+        batch: c.batch,
+        oldDay: c.requestType === 'reschedule' ? c.day : '',
+        oldStartTime: c.requestType === 'reschedule' ? '' : '',
+        oldEndTime: c.requestType === 'reschedule' ? '' : '',
+        oldRoom: c.requestType === 'reschedule' ? '' : '',
+        newDay: c.day,
+        newStartTime: c.startTime,
+        newEndTime: c.endTime,
+        newRoom: c.room
+      });
+      return { ok: true, message: `Administrative priority slot synchronized successfully${warning}. Students have been notified.`, bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
     }
 
     if (hasIssues) {
@@ -167,8 +186,25 @@ function Timetable() {
       return { ok: false, message: 'Requested slot is not available due to a scheduling clash. Check Priority Override for urgent faculty requirements.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) };
     }
     
-    setBookedSessions(p => [...p, c]); 
-    return { ok: true, message: 'Slot is available. Session has been booked successfully.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
+    setBookedSessions(p => [...p, c]);
+    // Send notification to students
+    sendNotification({
+      type: c.requestType === 'reschedule' ? 'reschedule' : 'extra',
+      faculty: c.faculty,
+      subjectName: c.subjectName,
+      className: c.className,
+      section: c.section,
+      batch: c.batch,
+      oldDay: c.requestType === 'reschedule' ? c.day : '',
+      oldStartTime: c.requestType === 'reschedule' ? '' : '',
+      oldEndTime: c.requestType === 'reschedule' ? '' : '',
+      oldRoom: c.requestType === 'reschedule' ? '' : '',
+      newDay: c.day,
+      newStartTime: c.startTime,
+      newEndTime: c.endTime,
+      newRoom: c.room
+    });
+    return { ok: true, message: 'Slot is available. Session has been booked successfully. Students have been notified.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
   }
 
   if (loading) return (

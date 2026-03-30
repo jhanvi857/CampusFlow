@@ -34,3 +34,30 @@ export async function analyzeCycle() {
   // Currently analyzes the entire registered state on backend
   return fetchJSON('/analyze-cycle')
 }
+
+// ── Notification APIs ──
+
+export async function getNotifications() {
+  return fetchJSON('/notifications')
+}
+
+export async function createNotification(data) {
+  return fetchJSON('/notifications', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}
+
+export async function markNotificationRead(id) {
+  return fetchJSON('/notifications/read', {
+    method: 'POST',
+    body: JSON.stringify({ id })
+  })
+}
+
+export async function markAllNotificationsRead() {
+  return fetchJSON('/notifications/read-all', {
+    method: 'POST',
+    body: JSON.stringify({})
+  })
+}

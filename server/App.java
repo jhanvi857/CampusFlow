@@ -9,6 +9,10 @@ public class App {
         app.get("/timetable", ApiController::getTimetable);
         app.get("/conflicts", ApiController::getConflicts);
         app.get("/analyze-cycle", ApiController::analyzeCycle);
+        app.get("/notifications", ApiController::getNotifications);
+        app.post("/notifications", ApiController::createNotification);
+        app.post("/notifications/read", ApiController::markNotificationRead);
+        app.post("/notifications/read-all", ApiController::markAllNotificationsRead);
         app.listen(8080);
     }
 }

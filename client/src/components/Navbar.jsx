@@ -1,12 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import NotificationBell from './NotificationBell'
 
 const navItems = [
   { to: '/', label: 'Home', icon: '⌂' },
   { to: '/timetable', label: 'Timetable', icon: '◫' },
   { to: '/conflicts', label: 'Conflicts', icon: '⚡' },
   { to: '/complaints', label: 'Complaints', icon: '✦' },
+  { to: '/notifications', label: 'Notifications', icon: '🔔' },
   { to: '/about', label: 'About', icon: 'ℹ' },
 ]
 
@@ -42,7 +44,7 @@ function Navbar() {
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-4">
           <nav className="flex items-center gap-1 rounded-2xl border border-honolulu-100/50 bg-white/60 p-1.5 backdrop-blur-sm shadow-soft">
-            {navItems.map((item) => (
+            {navItems.filter(i => i.to !== '/notifications').map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -59,6 +61,9 @@ function Navbar() {
               </NavLink>
             ))}
           </nav>
+
+          {/* Notification Bell */}
+          {user && <NotificationBell />}
 
           {!user ? (
             <div className="flex items-center gap-2">

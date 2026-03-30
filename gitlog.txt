@@ -1,0 +1,48 @@
+﻿commit cff5dc82d89b455b43bdb4e9c5310e3441d50373
+Author: Darshi Prajapati <darshi1707.p@gmail.com>
+Date:   Fri Mar 27 18:50:48 2026 +0000
+
+    Monday CSE A Time Table complete.
+
+diff --git a/server/data/DataStore.java b/server/data/DataStore.java
+index e10042e..526d66b 100644
+--- a/server/data/DataStore.java
++++ b/server/data/DataStore.java
+@@ -53,6 +53,37 @@ public class DataStore {
+             "11:00",
+             "12:40"
+         ));
++
++        sessions.add(new Session(
++            "4",
++            "CS102",
++            "Osperating System",
++            "Dr. Ritu Patel",
++            "Room 103",
++            "CSE",
++            "Lab",
++            "",
++            "A1",
++            "Monday",
++            "11:00",
++            "12:40"
++        ));
++
++        sessions.add(new Session(
++            "3",
++            "CS102",
++            "Data Communication and Computer Netwroks",
++            "Dr. Mani Shekhar Gupta",
++            "Room 104",
++            "CSE",
++            "Lab",
++            "",
++            "A3",
++            "Monday",
++            "11:00",
++            "12:40"
++        ));
++
+         return sessions;
+     }
+ }
