@@ -33,10 +33,6 @@ public class NotificationStore {
 
     public static synchronized boolean markAllAsRead() {
         for (Notification n : notifications) {
-            n.isRead = false;
-        }
-        // Actually mark all as read
-        for (Notification n : notifications) {
             n.isRead = true;
         }
         return true;
