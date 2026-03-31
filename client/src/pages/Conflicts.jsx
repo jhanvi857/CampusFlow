@@ -160,7 +160,7 @@ function Conflicts() {
                 {cycleStat?.hasCycle && (
                    <div className="mt-4 p-3 rounded-lg bg-red-950/40 border-l-2 border-red-500">
                       <p className="text-[8px] font-black uppercase text-red-400 opacity-50 mb-1">Structural Impasse detected</p>
-                      <p className="text-[10px] font-black text-red-200">{(cycleStat.path || []).join(' → ')}</p>
+                      <p className="text-[10px] font-black text-red-200">{(cycleStat.path || []).join('• ')}</p>
                    </div>
                 )}
              </div>
