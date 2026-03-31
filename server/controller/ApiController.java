@@ -45,7 +45,8 @@ public class ApiController {
                 .append("\"day\":\"").append(jsonEscape(s.day)).append("\",")
                 .append("\"startTime\":\"").append(jsonEscape(s.startTime)).append("\",")
                 .append("\"endTime\":\"").append(jsonEscape(s.endTime)).append("\",")
-                .append("\"time\":\"").append(jsonEscape(s.time)).append("\"")
+                .append("\"time\":\"").append(jsonEscape(s.time)).append("\",")
+                .append("\"requestType\":\"").append(jsonEscape(s.requestType)).append("\"")
                 .append("}");
 
             if (i < sessions.size() - 1) {
@@ -221,6 +222,27 @@ public class ApiController {
             );
 
             NotificationStore.addNotification(notification);
+
+            // Also add to ExtraSessionStore so it shows up globally in timetables
+            if ("extra".equals(type) || "reschedule".equals(type)) {
+                Session newSession = new Session(
+                    "EXT-" + id,
+                    subjectName,
+                    subjectName,
+                    faculty,
+                    newRoom,
+                    className,
+                    "lecture", // Default for extra, can be refined
+                    section,
+                    batch,
+                    newDay,
+                    newStartTime,
+                    newEndTime,
+                    type
+                );
+                data.ExtraSessionStore.addSession(newSession);
+            }
+
             ctx.send("{\"success\":true,\"id\":\"" + jsonEscape(id) + "\",\"notification\":" + notificationToJson(notification) + "}");
         } catch (Exception e) {
             ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
@@ -241,6 +263,17 @@ public class ApiController {
     public static void markAllNotificationsRead(HttpContext ctx) {
         NotificationStore.markAllAsRead();
         ctx.send("{\"success\":true}");
+    }
+
+    public static void deleteSession(HttpContext ctx) {
+        try {
+            String body = ctx.bodyAsString();
+            String id = extractJsonField(body, "id");
+            data.ExtraSessionStore.removeSession(id);
+            ctx.send("{\"success\":true}");
+        } catch (Exception e) {
+            ctx.status(400).send("{\"success\":false}");
+        }
     }
 
     private static String cycleResultToJson(graph.Graph.CycleResult res) {

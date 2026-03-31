@@ -13,6 +13,7 @@ public class App {
         app.post("/notifications", ApiController::createNotification);
         app.post("/notifications/read", ApiController::markNotificationRead);
         app.post("/notifications/read-all", ApiController::markAllNotificationsRead);
+        app.post("/sessions/delete", ApiController::deleteSession);
         app.listen(8080);
     }
 }

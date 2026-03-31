@@ -14,6 +14,8 @@ public class Session {
     public String startTime;
     public String endTime;
     public String time;
+    public String requestType;
+    public long createdAt;
 
     public Session(
         String id,
@@ -42,5 +44,26 @@ public class Session {
         this.startTime = startTime;
         this.endTime = endTime;
         this.time = day + " " + startTime + "-" + endTime;
+        this.requestType = "regular";
+        this.createdAt = System.currentTimeMillis();
+    }
+
+    public Session(
+        String id,
+        String subjectCode,
+        String subjectName,
+        String faculty,
+        String room,
+        String className,
+        String sessionType,
+        String section,
+        String batch,
+        String day,
+        String startTime,
+        String endTime,
+        String requestType
+    ) {
+        this(id, subjectCode, subjectName, faculty, room, className, sessionType, section, batch, day, startTime, endTime);
+        this.requestType = requestType;
     }
 }
