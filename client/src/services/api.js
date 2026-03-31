@@ -61,3 +61,10 @@ export async function markAllNotificationsRead() {
     body: JSON.stringify({})
   })
 }
+
+export async function deleteSession(id) {
+  return fetchJSON('/sessions/delete', {
+    method: 'POST',
+    body: JSON.stringify({ id })
+  })
+}

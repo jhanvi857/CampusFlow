@@ -5,7 +5,7 @@ function valueOrFallback(value, fallback = 'Not assigned') {
   return String(value)
 }
 
-function SessionCard({ session }) {
+function SessionCard({ session, onDelete }) {
   const course = session.subjectName || session.course || session.subjectCode || session.courseCode || session.courseName || session.subject || session.name || session.id || 'Course'
   const faculty = session.faculty || session.teacher || session.professor || session.instructor || 'Faculty TBD'
   const room = session.room || session.location || session.classroom || 'Room TBD'
@@ -19,7 +19,7 @@ function SessionCard({ session }) {
   const sessionType = session.sessionType || session.type || ''
   const topicLabel = session.subjectCode || session.courseCode || session.id
   const isLab = (sessionType || '').toLowerCase() === 'lab'
-  const isBooked = session.id?.startsWith?.('CF-')
+  const isExtra = session.requestType === 'extra' || session.requestType === 'reschedule' || session.id?.startsWith?.('EXT-')
 
   return (
     <article className="timetable-cell glass-card group relative overflow-hidden p-5">
@@ -30,9 +30,22 @@ function SessionCard({ session }) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{valueOrFallback(topicLabel)}</p>
           <h3 className="mt-1 text-lg font-bold tracking-tight text-slate-800 group-hover:text-honolulu-600 transition-colors">{valueOrFallback(course)}</h3>
         </div>
-        <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isBooked ? 'bg-amethyst-50 text-amethyst-600 border border-amethyst-200' : 'bg-honolulu-50 text-honolulu-600 border border-honolulu-200'}`}>
-          {isBooked ? 'Booked' : 'Session'}
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isExtra ? 'bg-amethyst-50 text-amethyst-600 border border-amethyst-200' : 'bg-honolulu-50 text-honolulu-600 border border-honolulu-200'}`}>
+            {isExtra ? 'Adjustment' : 'Session'}
+          </span>
+          {isExtra && onDelete && (
+            <button 
+              onClick={() => onDelete(session.id)}
+              className="rounded-full bg-red-50 p-1 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-100"
+              title="Remove manually"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-1.5">

@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import SessionCard from '../components/SessionCard'
 import ScheduleRequestForm from '../components/ScheduleRequestForm'
 import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText } from '../services/conflictEngine'
-import { getTimetable } from '../services/api'
+import { getTimetable, deleteSession } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../context/NotificationContext'
 
-const BOOKED_SESSION_STORAGE_KEY = 'campusflow-booked-sessions'
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function toBookableSession(f){return{id:`CF-${Date.now()}`,subjectName:f.subjectName,subjectCode:f.subjectName,courseCode:f.subjectName,faculty:f.faculty,room:f.venue,className:f.className,section:f.section,batch:f.batch,sessionType:f.sessionType,requestType:f.requestType,day:f.day,startTime:f.startTime,endTime:f.endTime,isOverride:!!f.isOverride,time:`${f.day} ${f.startTime}-${f.endTime}`}}
@@ -57,16 +56,26 @@ function Timetable() {
   const { user } = useAuth()
   const { sendNotification } = useNotifications()
   const [sessions, setSessions] = useState([])
-  const [bookedSessions, setBookedSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [dayFilter, setDayFilter] = useState('all')
 
-  useEffect(() => { try { const c = localStorage.getItem(BOOKED_SESSION_STORAGE_KEY); if (!c) return; const p = JSON.parse(c); if (Array.isArray(p)) setBookedSessions(p) } catch { setBookedSessions([]) } }, [])
-  useEffect(() => { (async () => { try { setLoading(true); setError(''); setSessions(normalizeTimetablePayload(await getTimetable())) } catch (e) { setError(e.message || 'Unable to load timetable data') } finally { setLoading(false) } })() }, [])
-  useEffect(() => { localStorage.setItem(BOOKED_SESSION_STORAGE_KEY, JSON.stringify(bookedSessions)) }, [bookedSessions])
+  async function fetchTimetable(silent = false) {
+    try { 
+      if (!silent) setLoading(true); 
+      setError(''); 
+      const data = await getTimetable();
+      setSessions(normalizeTimetablePayload(data));
+    } catch (e) { 
+      setError(e.message || 'Unable to load timetable data') 
+    } finally { 
+      if (!silent) setLoading(false) 
+    }
+  }
+
+  useEffect(() => { fetchTimetable() }, [])
 
   const isStudent = user?.role === 'student'
   
@@ -111,7 +120,7 @@ function Timetable() {
     return isCourseMatch && isSectionMatch && isBatchMatch && isYearMatch && isDegreeMatch;
   }
 
-  const allSessions = useMemo(() => [...sessions, ...bookedSessions], [bookedSessions, sessions])
+  const allSessions = useMemo(() => sessions, [sessions])
   
   // UI Filtering logic (shared across roles)
   const uiFilter = (s) => {
@@ -120,8 +129,8 @@ function Timetable() {
     return (!query || h.includes(query.toLowerCase())) && (typeFilter === 'all' || tt === typeFilter) && (dayFilter === 'all' || dt === dayFilter.toLowerCase())
   }
 
-  const extraLectures = useMemo(() => bookedSessions.filter(s => filterByStudentDetails(s) && uiFilter(s)), [bookedSessions, user, query, typeFilter, dayFilter])
-  const regularLectures = useMemo(() => sessions.filter(s => filterByStudentDetails(s) && uiFilter(s)), [sessions, user, query, typeFilter, dayFilter])
+  const extraLectures = useMemo(() => sessions.filter(s => (s.requestType === 'extra' || s.requestType === 'reschedule') && filterByStudentDetails(s) && uiFilter(s)), [sessions, user, query, typeFilter, dayFilter])
+  const regularLectures = useMemo(() => sessions.filter(s => (s.requestType === 'regular' || !s.requestType) && filterByStudentDetails(s) && uiFilter(s)), [sessions, user, query, typeFilter, dayFilter])
   const filteredSessions = useMemo(() => allSessions.filter(uiFilter), [allSessions, query, typeFilter, dayFilter])
 
   const stats = useMemo(() => { 
@@ -156,8 +165,8 @@ function Timetable() {
 
     if (c.isOverride) {
       const warning = hasIssues || hasClashes ? ' (Priority Override Activated)' : '';
-      setBookedSessions(p => [...p, { ...c, hasConflict: hasClashes, hasMaintenanceIssue: hasIssues }]);
-      // Send notification to students
+      
+      // Send notification to students AND trigger server-side storage
       sendNotification({
         type: c.requestType === 'reschedule' ? 'reschedule' : 'extra',
         faculty: c.faculty,
@@ -173,7 +182,8 @@ function Timetable() {
         newStartTime: c.startTime,
         newEndTime: c.endTime,
         newRoom: c.room
-      });
+      }).then(() => fetchTimetable(true)); // Silent refresh from server
+
       return { ok: true, message: `Administrative priority slot synchronized successfully${warning}. Students have been notified.`, bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
     }
 
@@ -186,8 +196,7 @@ function Timetable() {
       return { ok: false, message: 'Requested slot is not available due to a scheduling clash. Check Priority Override for urgent faculty requirements.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) };
     }
     
-    setBookedSessions(p => [...p, c]);
-    // Send notification to students
+    // Send notification to students AND trigger server-side storage
     sendNotification({
       type: c.requestType === 'reschedule' ? 'reschedule' : 'extra',
       faculty: c.faculty,
@@ -203,8 +212,19 @@ function Timetable() {
       newStartTime: c.startTime,
       newEndTime: c.endTime,
       newRoom: c.room
-    });
+    }).then(() => fetchTimetable(true)); // Silent refresh from server
+
     return { ok: true, message: 'Slot is available. Session has been booked successfully. Students have been notified.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
+  }
+
+  async function handleDeleteSession(id) {
+    if (!window.confirm('Are you sure you want to remove this adjustment manually?')) return;
+    try {
+      await deleteSession(id);
+      fetchTimetable();
+    } catch (e) {
+      alert('Failed to delete session: ' + e.message);
+    }
   }
 
   if (loading) return (
@@ -271,7 +291,13 @@ function Timetable() {
             </div>
             {extraLectures.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {extraLectures.map((s, i) => <SessionCard key={s.id || `extra-${i}`} session={s} />)}
+                {extraLectures.map((s, i) => (
+                  <SessionCard 
+                    key={s.id || `extra-${i}`} 
+                    session={s} 
+                    onDelete={!isStudent ? handleDeleteSession : null}
+                  />
+                ))}
               </div>
             ) : (
               <div className="glass-card border-dashed p-10 text-center">
@@ -304,7 +330,13 @@ function Timetable() {
           </div>
           {filteredSessions.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredSessions.map((s, i) => <SessionCard key={s.id || s.sessionId || `session-${i}`} session={s} />)}
+              {filteredSessions.map((s, i) => (
+                <SessionCard 
+                  key={s.id || s.sessionId || `session-${i}`} 
+                  session={s} 
+                  onDelete={!isStudent ? handleDeleteSession : null}
+                />
+              ))}
             </div>
           ) : (
             <div className="glass-card border-dashed p-10 text-center">
