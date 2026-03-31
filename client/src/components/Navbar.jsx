@@ -1,7 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import NotificationBell from './NotificationBell'
+import { getTimetable, deleteSession } from '../services/api'
 
 const navItems = [
   { to: '/', label: 'Home', icon: '⌂' },
@@ -21,6 +22,39 @@ function Navbar() {
     logout();
     navigate('/login');
   };
+
+  const [allSessions, setAllSessions] = useState([])
+  const [showManager, setShowManager] = useState(false)
+
+  const fetchManaged = async () => {
+    try {
+      const data = await getTimetable();
+      setAllSessions(Array.isArray(data) ? data : data.sessions || []);
+    } catch (e) { console.error('Failed to load sessions for manager', e) }
+  }
+
+  useEffect(() => {
+    if (user?.role === 'faculty') {
+      fetchManaged();
+      const interval = setInterval(fetchManaged, 30000); // refresh every 30s
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  const myAdjustments = useMemo(() => {
+    return allSessions.filter(s => 
+      (s.requestType === 'extra' || s.requestType === 'reschedule') && 
+      (s.faculty || '').toLowerCase().includes((user?.name || '').toLowerCase())
+    );
+  }, [allSessions, user]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Remove this extra session?')) return;
+    try {
+      await deleteSession(id);
+      fetchManaged();
+    } catch (e) { alert('Failed to delete: ' + e.message) }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-honolulu-100/50 bg-white/70 backdrop-blur-2xl">
@@ -61,6 +95,58 @@ function Navbar() {
               </NavLink>
             ))}
           </nav>
+
+          {/* Adjustment Manager for Faculty */}
+          {user?.role === 'faculty' && (
+            <div className="relative">
+              <button 
+                onClick={() => setShowManager(!showManager)}
+                className={`relative flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-bold transition-all ${
+                  showManager ? 'border-amethyst-200 bg-amethyst-50 text-amethyst-700' : 'border-slate-100 bg-white/80 text-slate-600 hover:border-amethyst-100 hover:bg-amethyst-50/30'
+                }`}
+              >
+                <span>⚔</span>
+                My Adjustments
+                {myAdjustments.length > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amethyst-500 text-[10px] font-black text-white outline outline-2 outline-white">
+                    {myAdjustments.length}
+                  </span>
+                )}
+              </button>
+
+              {showManager && (
+                <div className="absolute right-0 top-full mt-2 w-72 origin-top-right rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl animate-in fade-in zoom-in duration-200">
+                  <div className="mb-2 px-3 pt-2">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Manage Extra Lectures</h3>
+                  </div>
+                  <div className="max-h-[300px] space-y-1 overflow-y-auto pr-1">
+                    {myAdjustments.length > 0 ? (
+                      myAdjustments.map(s => (
+                        <div key={s.id} className="group relative rounded-xl border border-slate-50 bg-slate-50/50 p-3 transition-colors hover:border-amethyst-100 hover:bg-white">
+                          <button 
+                            onClick={() => handleDelete(s.id)}
+                            className="absolute right-2 top-2 rounded-lg bg-red-50 p-1.5 text-red-500 opacity-0 transition-opacity hover:bg-red-500 hover:text-white group-hover:opacity-100 shadow-sm"
+                            title="Cancel adjustment"
+                          >
+                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-amethyst-500">{s.day} • {s.startTime}</p>
+                          <p className="text-xs font-bold text-slate-800">{s.subjectName}</p>
+                          <p className="mt-0.5 text-[10px] text-slate-500">Room: {s.room} • {s.className} Sec {s.section}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-6 text-center">
+                        <p className="text-xs font-medium text-slate-400">No active adjustments found.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Notification Bell */}
           {user && <NotificationBell />}
