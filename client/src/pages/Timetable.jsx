@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import SessionCard from '../components/SessionCard'
 import ScheduleRequestForm from '../components/ScheduleRequestForm'
+import RescheduleForm from '../components/RescheduleForm'
 import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText, normalizeDay } from '../services/conflictEngine'
 import { getTimetable, deleteSession, getComplaints } from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -66,6 +67,13 @@ function Timetable() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [dayFilter, setDayFilter] = useState('all')
   const [roomComplaints, setRoomComplaints] = useState([])
+  const isFaculty = user?.role === 'faculty'
+  const isStudent = user?.role === 'student'
+  const isAdmin = user?.role === 'admin'
+  const [showOnlyMine, setShowOnlyMine] = useState(isFaculty)
+
+  // Removed forced query setting to prevent "locked" empty view if name differs slightly from DB
+  useEffect(() => { fetchTimetable() }, [])
 
   async function fetchTimetable(silent = false) {
     try { 
@@ -81,17 +89,16 @@ function Timetable() {
     }
   }
 
-  useEffect(() => { fetchTimetable() }, [])
+  // Removed redundant fetchTimetable call
 
-  const isStudent = user?.role === 'student'
-  
+
   const clean = (str) => (str || '').toLowerCase().replace(/[\s.-]/g, '');
+  const cleanText = (str) => (str || '').toLowerCase().replace(/[\s.-]/g, '');
 
   // Filtering logic for students based on their degree, year, section, batch
   const filterByStudentDetails = (s) => {
     if (!isStudent) return true;
     
-    const clean = (str) => (str || '').toLowerCase().replace(/[\s.-]/g, '');
     const sClass = clean(s.className || '');
     const sSection = clean(s.section || '');
     const sBatch = clean(s.batch || '');
@@ -132,12 +139,28 @@ function Timetable() {
   const uiFilter = (s) => {
     const tt = (s.sessionType || '').toLowerCase(), dt = (s.day || '').toLowerCase()
     const h = [s.subjectName, s.subjectCode, s.courseCode, s.faculty, s.className, s.section, s.batch, s.room].filter(Boolean).join(' ').toLowerCase()
-    return (!query || h.includes(query.toLowerCase())) && (typeFilter === 'all' || tt === typeFilter) && (dayFilter === 'all' || dt === dayFilter.toLowerCase())
+    const matchesSearch = !query || h.includes(query.toLowerCase())
+    
+    // Faculty "My Classes" toggle logic
+    let matchesFaculty = true
+    if (showOnlyMine && isFaculty && user?.name) {
+      const cleanMyName = cleanText(user.name)
+      const cleanSessionFac = cleanText(s.faculty)
+      // FIX: Ensure cleanSessionFac is not empty before checking 'includes'
+      matchesFaculty = cleanSessionFac && (cleanSessionFac.includes(cleanMyName) || cleanMyName.includes(cleanSessionFac))
+    }
+
+    const dtNormalized = normalizeDay(s.day).toLowerCase();
+    const filterNormalized = dayFilter.toLowerCase();
+
+    return matchesSearch && matchesFaculty && (typeFilter === 'all' || tt === typeFilter) && (dayFilter === 'all' || dtNormalized === filterNormalized)
   }
 
   const extraLectures = useMemo(() => sessions.filter(s => (s.requestType === 'extra' || s.requestType === 'reschedule') && filterByStudentDetails(s) && uiFilter(s)), [sessions, user, query, typeFilter, dayFilter])
   const regularLectures = useMemo(() => sessions.filter(s => (s.requestType === 'regular' || !s.requestType) && filterByStudentDetails(s) && uiFilter(s)), [sessions, user, query, typeFilter, dayFilter])
   const filteredSessions = useMemo(() => allSessions.filter(uiFilter), [allSessions, query, typeFilter, dayFilter])
+
+  const missingInfo = isStudent && (!user.year || !user.section || !user.course);
 
   const stats = useMemo(() => { 
     const targetSessions = isStudent ? [...extraLectures, ...regularLectures] : allSessions.filter(uiFilter);
@@ -154,7 +177,7 @@ function Timetable() {
   const uniqueDays = useMemo(() => [...new Set(allSessions.map(s => normalizeDay(s.day)).filter(Boolean))], [allSessions])
   const uniqueRooms = useMemo(() => [...new Set(allSessions.map(s => s.room).filter(Boolean))], [allSessions])
 
-  function handleSlotRequest(f) {
+  function handleSlotRequest(f, originalId = null) {
     const c = toBookableSession(f);
     const w = getSessionWindow(c);
     
@@ -174,7 +197,6 @@ function Timetable() {
     if (c.isOverride) {
       const warning = hasIssues || hasClashes ? ' (Priority Override Activated)' : '';
       
-      // Send notification to students AND trigger server-side storage
       sendNotification({
         type: c.requestType === 'reschedule' ? 'reschedule' : 'extra',
         faculty: c.faculty,
@@ -182,15 +204,22 @@ function Timetable() {
         className: c.className,
         section: c.section,
         batch: c.batch,
-        oldDay: '',
-        oldStartTime: '',
-        oldEndTime: '',
-        oldRoom: '',
+        oldDay: c.oldDay || '',
+        oldStartTime: c.oldStartTime || '',
+        oldEndTime: c.oldEndTime || '',
+        oldRoom: c.oldRoom || '',
         newDay: c.day,
         newStartTime: c.startTime,
         newEndTime: c.endTime,
         newRoom: c.room
-      }).then(() => fetchTimetable(true)); // Silent refresh from server
+      });
+
+      // Handle automated cancellation if this was a reschedule
+      if (originalId) {
+        deleteSession(originalId).then(() => fetchTimetable(true));
+      } else {
+        fetchTimetable(true);
+      }
 
       return { ok: true, message: `Administrative priority slot synchronized successfully${warning}. Students have been notified.`, bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
     }
@@ -212,26 +241,48 @@ function Timetable() {
       className: c.className,
       section: c.section,
       batch: c.batch,
-      oldDay: '',
-      oldStartTime: '',
-      oldEndTime: '',
-      oldRoom: '',
+      oldDay: c.oldDay || '',
+      oldStartTime: c.oldStartTime || '',
+      oldEndTime: c.oldEndTime || '',
+      oldRoom: c.oldRoom || '',
       newDay: c.day,
       newStartTime: c.startTime,
       newEndTime: c.endTime,
       newRoom: c.room
-    }).then(() => fetchTimetable(true)); // Silent refresh from server
+    });
+
+    // Handle automated cancellation if this was a reschedule
+    if (originalId) {
+      deleteSession(originalId).then(() => fetchTimetable(true));
+    } else {
+      fetchTimetable(true);
+    }
 
     return { ok: true, message: 'Slot is available. Session has been booked successfully. Students have been notified.', bookedSlot: { day: c.day, startTime: c.startTime, endTime: c.endTime, venue: c.room } };
   }
 
   async function handleDeleteSession(id) {
-    if (!window.confirm('Are you sure you want to remove this adjustment manually?')) return;
+    const session = sessions.find(s => s.id === id);
+    if (!session) return;
+
+    // Security Check: Only assigned faculty or Admin can delete
+    const isOwner = isSameText(session.faculty, user.name);
+    if (!isAdmin && !isOwner) {
+      alert("Permission Denied: You can only cancel your own lectures.");
+      return;
+    }
+
+    const isExtra = id.startsWith('EXT-');
+    const msg = isExtra 
+      ? 'Are you sure you want to remove this manual adjustment?' 
+      : `Institutional Action: Are you sure you want to CANCEL '${session.subjectName}'? Students will be notified.`;
+    
+    if (!window.confirm(msg)) return;
     try {
       await deleteSession(id);
       fetchTimetable();
     } catch (e) {
-      alert('Failed to delete session: ' + e.message);
+      alert('Failed to update schedule: ' + e.message);
     }
   }
 
@@ -246,6 +297,20 @@ function Timetable() {
 
   return (
     <section className="space-y-6">
+      {missingInfo && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 flex flex-col sm:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-2 duration-500">
+           <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </div>
+              <div>
+                 <p className="text-sm font-black text-amber-800 uppercase tracking-tight">Identity Info Incomplete</p>
+                 <p className="text-[11px] text-amber-600 font-bold">Your profile is missing Year or Section data. Showing global timetable overview.</p>
+              </div>
+           </div>
+           <button onClick={() => window.location.href='/login'} className="px-4 py-2 bg-amber-200 text-amber-800 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-amber-300 transition-colors">Update Profile</button>
+        </div>
+      )}
       <div className="glass-card-strong relative overflow-hidden p-6">
         <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-honolulu-500 via-amethyst-500 to-honolulu-500" />
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -276,16 +341,37 @@ function Timetable() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by subject, faculty, class, room..." className="input-glass" />
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input-glass"><option value="all">All Session Types</option><option value="lecture">Lecture</option><option value="lab">Lab</option><option value="tutorial">Tutorial</option></select>
+        <div className="mt-6 grid gap-3 md:grid-cols-4">
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search everything..." className="input-glass" />
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="input-glass"><option value="all">All Types</option><option value="lecture">Lecture</option><option value="lab">Lab</option><option value="tutorial">Tutorial</option></select>
           <select value={dayFilter} onChange={e => setDayFilter(e.target.value)} className="input-glass"><option value="all">All Days</option>{uniqueDays.map(d => <option key={d} value={d}>{d}</option>)}</select>
+          {isFaculty && (
+            <button 
+              onClick={() => setShowOnlyMine(!showOnlyMine)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showOnlyMine ? 'bg-honolulu-600 text-white shadow-lg shadow-honolulu-500/30' : 'bg-white text-slate-400 border border-slate-100 hover:border-honolulu-200 hover:text-honolulu-600'}`}
+            >
+              {showOnlyMine ? 'Show All Classes' : 'Show My Classes Only'}
+            </button>
+          )}
         </div>
       </div>
 
       {!isStudent && (
         <div className="animate-in fade-in slide-in-from-top-4 duration-500">
-          <ScheduleRequestForm onRequest={handleSlotRequest} />
+          <div className="flex flex-col xl:flex-row gap-6">
+             <div className="flex-1">
+                <ScheduleRequestForm onRequest={handleSlotRequest} />
+             </div>
+             {isFaculty && (
+               <div className="flex-1">
+                  <RescheduleForm 
+                    sessions={sessions} 
+                    facultyName={user.name} 
+                    onReschedule={handleSlotRequest} 
+                  />
+               </div>
+             )}
+          </div>
         </div>
       )}
 
@@ -342,7 +428,7 @@ function Timetable() {
                 <SessionCard 
                   key={s.id || s.sessionId || `session-${i}`} 
                   session={s} 
-                  onDelete={!isStudent ? handleDeleteSession : null}
+                  onDelete={(isAdmin || isSameText(s.faculty, user.name)) ? handleDeleteSession : null}
                 />
               ))}
             </div>

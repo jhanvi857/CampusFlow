@@ -34,14 +34,14 @@ function SessionCard({ session, onDelete }) {
           <span className={`rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${isExtra ? 'bg-amethyst-50 text-amethyst-600 border border-amethyst-200' : 'bg-honolulu-50 text-honolulu-600 border border-honolulu-200'}`}>
             {isExtra ? 'Adjustment' : 'Session'}
           </span>
-          {isExtra && onDelete && (
+          {onDelete && (
             <button 
               onClick={() => onDelete(session.id)}
-              className="rounded-full bg-red-50 p-1 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-100"
-              title="Remove manually"
+              className="rounded-full bg-red-50 p-1.5 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
+              title="Cancel/Remove Session"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
             </button>
           )}

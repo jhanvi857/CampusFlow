@@ -10,7 +10,16 @@ public class TimetableService {
     public List<Session> getAllSessions() {
         List<Session> all = new ArrayList<>(DataStore.getSessions());
         all.addAll(ExtraSessionStore.getAllSessions());
-        return all;
+        
+        // Filter out cancelled sessions
+        List<Session> active = new ArrayList<>();
+        for (Session s : all) {
+            // Check if ID is not null and not cancelled
+            if (s.id != null && !data.CancelledSessionStore.isCancelled(s.id)) {
+                active.add(s);
+            }
+        }
+        return active;
     }
 
     private int toMinutes(String timeValue) {

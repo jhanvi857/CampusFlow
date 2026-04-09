@@ -312,7 +312,13 @@ public class ApiController {
         try {
             String body = ctx.bodyAsString();
             String id = extractJsonField(body, "id");
+            
+            // 1. Always mark as cancelled in the global cancel store (for regular sessions)
+            data.CancelledSessionStore.cancelSession(id);
+            
+            // 2. Also try to remove from ExtraSessionStore (for adjustment sessions)
             data.ExtraSessionStore.removeSession(id);
+            
             ctx.send("{\"success\":true}");
         } catch (Exception e) {
             ctx.status(400).send("{\"success\":false}");
