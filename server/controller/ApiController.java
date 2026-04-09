@@ -445,4 +445,27 @@ public class ApiController {
             ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
         }
     }
+    public static void registerFaculty(HttpContext ctx) {
+        try {
+            String body = ctx.bodyAsString();
+            String email = extractJsonField(body, "email");
+            String password = extractJsonField(body, "password");
+
+            if (email.isEmpty() || password.isEmpty()) {
+                ctx.status(400).send("{\"success\":false,\"error\":\"Email and password are required\"}");
+                return;
+            }
+
+            if (FACULTY_CREDENTIALS.containsKey(email)) {
+                ctx.status(400).send("{\"success\":false,\"error\":\"Faculty member already exists\"}");
+                return;
+            }
+
+            FACULTY_CREDENTIALS.put(email, password);
+            System.out.println("Registered faculty: " + email);
+            ctx.send("{\"success\":true}");
+        } catch (Exception e) {
+            ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
+        }
+    }
 }

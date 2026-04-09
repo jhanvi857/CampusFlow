@@ -19,6 +19,7 @@ public class App {
         app.post("/complaints/add", ApiController::addComplaint);
         app.post("/complaints/resolve", ApiController::resolveComplaint);
         app.post("/rooms/available", ApiController::getAvailableRooms);
+        app.post("/faculty/register", ApiController::registerFaculty);
         app.listen(8080);
     }
 }

@@ -98,14 +98,52 @@ const AdminDashboard = () => {
         )}
       </section>
 
-      <section className="glass-card p-8 border-dashed">
-         <div className="text-center py-12">
-            <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mb-4">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+      <section className="glass-card p-8">
+         <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+            <h2 className="text-xl font-black text-slate-800 uppercase tracking-widest">Faculty Management</h2>
+            <span className="text-[10px] font-black uppercase text-honolulu-600 bg-honolulu-50 px-3 py-1 rounded-lg border border-honolulu-100">Identity Provisioning</span>
+         </div>
+         
+         <div className="grid gap-10 lg:grid-cols-[1fr_1.5fr]">
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const email = formData.get('email');
+                const password = formData.get('password');
+                try {
+                  await api.registerFaculty({ email, password });
+                  alert(`Identity created for ${email}`);
+                  e.target.reset();
+                } catch (err) {
+                  alert(err.message || "Credential collision detected.");
+                }
+              }}
+              className="space-y-4"
+            >
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Institutional Email</label>
+                  <input name="email" type="email" required placeholder="e.g. name@university.edu" className="input-glass w-full" />
+               </div>
+               <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Access Credentials (Password)</label>
+                  <input name="password" type="password" required className="input-glass w-full" />
+               </div>
+               <button type="submit" className="btn-brand w-full py-4 uppercase font-black tracking-widest shadow-xl shadow-honolulu-500/20">Commit New Faculty Identity</button>
+            </form>
+
+            <div className="bg-slate-50/50 rounded-3xl p-6 border border-slate-100 flex flex-col justify-center">
+               <div className="flex items-center gap-4 mb-4">
+                  <div className="h-12 w-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-honolulu-600">
+                     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 3a10.003 10.003 0 00-6.146 17.961l.053.091m0 0a10.725 10.725 0 01-3.201-4.7" /></svg>
+                  </div>
+                  <div>
+                     <h3 className="text-sm font-black text-slate-800 uppercase">Topological Auth Bridge</h3>
+                     <p className="text-[10px] text-slate-500 font-bold">Synchronizing credentials with institutional directory.</p>
+                  </div>
+               </div>
+               <p className="text-xs text-slate-500 leading-relaxed italic">Registered faculty members gain instantaneous administrative access to the Timetable Diagnostic Center, enabling them to request extra lectures and trigger institutional broad-spectrum notifications.</p>
             </div>
-            <h3 className="text-lg font-black text-slate-800 uppercase">Faculty Hub</h3>
-            <p className="text-sm text-slate-500 mt-2 italic px-8">Administrative capability to dynamically register and manage faculty identities is currently in topological staging.</p>
-            <button disabled className="mt-6 px-8 py-3 bg-slate-200 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest cursor-not-allowed">Deploy Specialist Hub</button>
          </div>
       </section>
     </div>

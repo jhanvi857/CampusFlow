@@ -102,3 +102,10 @@ export async function getAvailableRooms(day, startTime, endTime) {
     body: JSON.stringify({ day, startTime, endTime })
   })
 }
+
+export async function registerFaculty(data) {
+  return fetchJSON('/faculty/register', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  })
+}

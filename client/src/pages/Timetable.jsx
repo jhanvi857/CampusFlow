@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import SessionCard from '../components/SessionCard'
 import ScheduleRequestForm from '../components/ScheduleRequestForm'
-import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText } from '../services/conflictEngine'
+import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText, normalizeDay } from '../services/conflictEngine'
 import { getTimetable, deleteSession, getComplaints } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../context/NotificationContext'
@@ -151,7 +151,7 @@ function Timetable() {
     return b 
   }, [allSessions, extraLectures, regularLectures, isStudent, query, typeFilter, dayFilter])
 
-  const uniqueDays = useMemo(() => [...new Set(allSessions.map(s => s.day).filter(Boolean).map(String))], [allSessions])
+  const uniqueDays = useMemo(() => [...new Set(allSessions.map(s => normalizeDay(s.day)).filter(Boolean))], [allSessions])
   const uniqueRooms = useMemo(() => [...new Set(allSessions.map(s => s.room).filter(Boolean))], [allSessions])
 
   function handleSlotRequest(f) {
