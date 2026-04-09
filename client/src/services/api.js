@@ -22,6 +22,13 @@ async function fetchJSON(endpoint, options = {}) {
   return response.json()
 }
 
+export async function login(credentials) {
+  return fetchJSON('/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials)
+  })
+}
+
 export async function getTimetable() {
   return fetchJSON('/timetable')
 }
@@ -66,5 +73,32 @@ export async function deleteSession(id) {
   return fetchJSON('/sessions/delete', {
     method: 'POST',
     body: JSON.stringify({ id })
+  })
+}
+
+// ── Complaint & Room APIs ──
+
+export async function getComplaints() {
+  return fetchJSON('/complaints')
+}
+
+export async function addComplaint(room, feature) {
+  return fetchJSON('/complaints/add', {
+    method: 'POST',
+    body: JSON.stringify({ room, feature })
+  })
+}
+
+export async function resolveComplaint(id) {
+  return fetchJSON('/complaints/resolve', {
+    method: 'POST',
+    body: JSON.stringify({ id })
+  })
+}
+
+export async function getAvailableRooms(day, startTime, endTime) {
+  return fetchJSON('/rooms/available', {
+    method: 'POST',
+    body: JSON.stringify({ day, startTime, endTime })
   })
 }

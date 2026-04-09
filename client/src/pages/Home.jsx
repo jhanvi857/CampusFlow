@@ -67,7 +67,7 @@ function Home() {
             <div className="rounded-[2rem] bg-white overflow-hidden border border-slate-200 aspect-[21/9] relative shadow-inner">
               {/* Full Image Background */}
               <img 
-                src="/image.png" 
+                src="/canvas-hero.png" 
                 alt="Scheduling Canvas Preview" 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 onError={(e) => { e.target.style.opacity = '0.5'; }}

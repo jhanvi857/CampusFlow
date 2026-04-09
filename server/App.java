@@ -14,6 +14,11 @@ public class App {
         app.post("/notifications/read", ApiController::markNotificationRead);
         app.post("/notifications/read-all", ApiController::markAllNotificationsRead);
         app.post("/sessions/delete", ApiController::deleteSession);
+        app.post("/login", ApiController::login);
+        app.get("/complaints", ApiController::getComplaints);
+        app.post("/complaints/add", ApiController::addComplaint);
+        app.post("/complaints/resolve", ApiController::resolveComplaint);
+        app.post("/rooms/available", ApiController::getAvailableRooms);
         app.listen(8080);
     }
 }

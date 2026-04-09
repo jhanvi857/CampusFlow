@@ -11,12 +11,25 @@ const navItems = [
   { to: '/complaints', label: 'Complaints', icon: '✦' },
   { to: '/notifications', label: 'Notifications', icon: '🔔' },
   { to: '/about', label: 'About', icon: 'ℹ' },
+  { to: '/admin', label: 'Admin Console', icon: '⚙' },
 ]
 
 function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const filteredNavItems = useMemo(() => {
+    if (user?.role === 'admin') {
+      return navItems.filter(item => ['/', '/admin', '/about'].includes(item.to));
+    }
+    // Faculty should see everything except Admin Console
+    if (user?.role === 'faculty') {
+      return navItems.filter(item => item.to !== '/admin');
+    }
+    // Students only see certain things
+    return navItems.filter(item => !['/admin'].includes(item.to));
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -42,6 +55,7 @@ function Navbar() {
   }, [user]);
 
   const myAdjustments = useMemo(() => {
+    if (user?.role !== 'faculty') return [];
     return allSessions.filter(s => 
       (s.requestType === 'extra' || s.requestType === 'reschedule') && 
       (s.faculty || '').toLowerCase().includes((user?.name || '').toLowerCase())
@@ -70,7 +84,7 @@ function Navbar() {
               Campus<span className="bg-gradient-to-r from-honolulu-500 to-amethyst-500 bg-clip-text text-transparent">Flow</span>
             </span>
             <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-honolulu-500/50">
-              Scheduling Intelligence
+              Admin Interface
             </span>
           </span>
         </NavLink>
@@ -78,7 +92,7 @@ function Navbar() {
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-4">
           <nav className="flex items-center gap-1 rounded-2xl border border-honolulu-100/50 bg-white/60 p-1.5 backdrop-blur-sm shadow-soft">
-            {navItems.filter(i => i.to !== '/notifications').map((item) => (
+            {filteredNavItems.filter(i => i.to !== '/notifications').map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -164,7 +178,7 @@ function Navbar() {
             <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/80 p-1.5 pl-3 shadow-soft">
               <div className="text-right">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{user.role}</p>
-                <p className="text-sm font-bold text-slate-800">{user.name}</p>
+                <p className="text-sm font-bold text-slate-800">{user.role === 'admin' ? 'Administrator' : user.name}</p>
               </div>
               <button 
                 onClick={handleLogout}

@@ -9,6 +9,7 @@ import Complaints from './pages/Complaints'
 import Notifications from './pages/Notifications'
 import About from './pages/About'
 import Login from './pages/Login'
+import AdminDashboard from './pages/AdminDashboard'
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -33,11 +34,12 @@ function AppContent() {
       <Navbar />
       <main className="relative z-10 mx-auto w-full max-w-[1380px] px-4 pb-16 pt-8 sm:px-6 lg:px-8">
         <Routes>
-          <Route path="/login" element={user ? <Navigate to="/timetable" /> : <Login />} />
+          <Route path="/login" element={user ? (user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/timetable" />) : <Login />} />
           <Route path="/" element={<Home />} />
           <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
           <Route path="/conflicts" element={<ProtectedRoute><Conflicts /></ProtectedRoute>} />
           <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
           <Route path="/about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import SessionCard from '../components/SessionCard'
 import ScheduleRequestForm from '../components/ScheduleRequestForm'
 import { getSessionWindow, findConflictsForSession, toMinutes, toTimeLabel, isSameText } from '../services/conflictEngine'
-import { getTimetable, deleteSession } from '../services/api'
+import { getTimetable, deleteSession, getComplaints } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../context/NotificationContext'
 
@@ -12,10 +12,14 @@ function toBookableSession(f){return{id:`CF-${Date.now()}`,subjectName:f.subject
 
 function getRoomIssues(roomName, complaints) {
   if (!complaints || !Array.isArray(complaints)) return [];
-  return complaints.filter(c => 
-    (c.status === 'open' || c.status === 'in-review') && 
-    (isSameText(c.location, roomName) || c.location.toLowerCase().includes(roomName.toLowerCase()))
-  );
+  return complaints.filter(c => {
+    const isPending = c.status === 'open' || c.status === 'in-review' || c.status === 'Pending';
+    if (!isPending) return false;
+
+    const loc = (c.room || c.location || '').toLowerCase().trim();
+    const target = roomName.toLowerCase().trim();
+    return loc === target || loc.includes(target) || target.includes(loc);
+  });
 }
 
 function findConflicts(c, all) {
@@ -61,13 +65,15 @@ function Timetable() {
   const [query, setQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [dayFilter, setDayFilter] = useState('all')
+  const [roomComplaints, setRoomComplaints] = useState([])
 
   async function fetchTimetable(silent = false) {
     try { 
       if (!silent) setLoading(true); 
       setError(''); 
-      const data = await getTimetable();
-      setSessions(normalizeTimetablePayload(data));
+      const [tData, cData] = await Promise.all([getTimetable(), getComplaints()]);
+      setSessions(normalizeTimetablePayload(tData));
+      setRoomComplaints(cData || []);
     } catch (e) { 
       setError(e.message || 'Unable to load timetable data') 
     } finally { 
@@ -151,12 +157,14 @@ function Timetable() {
   function handleSlotRequest(f) {
     const c = toBookableSession(f);
     const w = getSessionWindow(c);
-    const complaintsStr = localStorage.getItem('campusflow-complaints');
-    const complaints = complaintsStr ? JSON.parse(complaintsStr) : [];
-    const roomIssues = getRoomIssues(c.room, complaints);
+    
+    // Combine local storage and backend complaints for maximum safety
+    const localComplaints = JSON.parse(localStorage.getItem('campusflow-complaints') || '[]');
+    const allComplaints = [...roomComplaints, ...localComplaints];
+    const roomIssues = getRoomIssues(c.room, allComplaints);
 
     if (w && (w.start < 540 || w.end > 1020)) {
-      return { ok: false, message: 'Invalid time. College hours are from 09:00 AM to 05:00 PM.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) };
+      return { ok: false, message: 'Invalid time. College hours are from 09:00 AM to 05:00 PM.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, allComplaints) };
     }
 
     const conflicts = findConflicts(c, allSessions);
@@ -188,12 +196,12 @@ function Timetable() {
     }
 
     if (hasIssues) {
-      const issuesLine = roomIssues.map(i => `${i.category.toUpperCase()}: ${i.title}`).join(' | ');
-      return { ok: false, message: `Requested room (${c.room}) has active maintenance issues: ${issuesLine}. Use Priority Override to bypass.`, suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) };
+      const issuesLine = roomIssues.map(i => `${(i.category || i.feature || 'Issue').toUpperCase()}: ${i.title || `${i.feature} in ${i.room}`}`).join(' | ');
+      return { ok: false, message: `Requested room (${c.room}) has active maintenance issues: ${issuesLine}. Use Priority Override to bypass.`, suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, allComplaints) };
     }
 
     if (hasClashes) {
-      return { ok: false, message: 'Requested slot is not available due to a scheduling clash. Check Priority Override for urgent faculty requirements.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, complaints) };
+      return { ok: false, message: 'Requested slot is not available due to a scheduling clash. Check Priority Override for urgent faculty requirements.', suggestions: findAlternativeSlots(c, allSessions, uniqueRooms, allComplaints) };
     }
     
     // Send notification to students AND trigger server-side storage

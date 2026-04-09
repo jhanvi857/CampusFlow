@@ -13,17 +13,27 @@ public class ApiController {
     private static TimetableService ts = new TimetableService();
     private static ConflictService cs = new ConflictService();
 
+    private static final Map<String, String> FACULTY_CREDENTIALS = new HashMap<>();
+    static {
+        FACULTY_CREDENTIALS.put("admin@campusflow.com", "admin123");
+        FACULTY_CREDENTIALS.put("tejas.modi@university.edu", "faculty123");
+        FACULTY_CREDENTIALS.put("ritu.patel@university.edu", "faculty123");
+        FACULTY_CREDENTIALS.put("hitesh.c@university.edu", "faculty123");
+        FACULTY_CREDENTIALS.put("mani.gupta@university.edu", "faculty123");
+        FACULTY_CREDENTIALS.put("ashlesha.bhise@adaniuni.ac.in", "Ashlesha123");
+    }
+
     private static String jsonEscape(String input) {
         if (input == null) {
             return "";
         }
 
         return input
-            .replace("\\", "\\\\")
-            .replace("\"", "\\\"")
-            .replace("\n", "\\n")
-            .replace("\r", "\\r")
-            .replace("\t", "\\t");
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private static String sessionsToJson(List<Session> sessions) {
@@ -32,22 +42,22 @@ public class ApiController {
         for (int i = 0; i < sessions.size(); i++) {
             Session s = sessions.get(i);
             json.append("{")
-                .append("\"id\":\"").append(jsonEscape(s.id)).append("\",")
-                .append("\"subjectCode\":\"").append(jsonEscape(s.subjectCode)).append("\",")
-                .append("\"courseCode\":\"").append(jsonEscape(s.subjectCode)).append("\",")
-                .append("\"subjectName\":\"").append(jsonEscape(s.subjectName)).append("\",")
-                .append("\"faculty\":\"").append(jsonEscape(s.faculty)).append("\",")
-                .append("\"room\":\"").append(jsonEscape(s.room)).append("\",")
-                .append("\"className\":\"").append(jsonEscape(s.className)).append("\",")
-                .append("\"sessionType\":\"").append(jsonEscape(s.sessionType)).append("\",")
-                .append("\"section\":\"").append(jsonEscape(s.section)).append("\",")
-                .append("\"batch\":\"").append(jsonEscape(s.batch)).append("\",")
-                .append("\"day\":\"").append(jsonEscape(s.day)).append("\",")
-                .append("\"startTime\":\"").append(jsonEscape(s.startTime)).append("\",")
-                .append("\"endTime\":\"").append(jsonEscape(s.endTime)).append("\",")
-                .append("\"time\":\"").append(jsonEscape(s.time)).append("\",")
-                .append("\"requestType\":\"").append(jsonEscape(s.requestType)).append("\"")
-                .append("}");
+                    .append("\"id\":\"").append(jsonEscape(s.id)).append("\",")
+                    .append("\"subjectCode\":\"").append(jsonEscape(s.subjectCode)).append("\",")
+                    .append("\"courseCode\":\"").append(jsonEscape(s.subjectCode)).append("\",")
+                    .append("\"subjectName\":\"").append(jsonEscape(s.subjectName)).append("\",")
+                    .append("\"faculty\":\"").append(jsonEscape(s.faculty)).append("\",")
+                    .append("\"room\":\"").append(jsonEscape(s.room)).append("\",")
+                    .append("\"className\":\"").append(jsonEscape(s.className)).append("\",")
+                    .append("\"sessionType\":\"").append(jsonEscape(s.sessionType)).append("\",")
+                    .append("\"section\":\"").append(jsonEscape(s.section)).append("\",")
+                    .append("\"batch\":\"").append(jsonEscape(s.batch)).append("\",")
+                    .append("\"day\":\"").append(jsonEscape(s.day)).append("\",")
+                    .append("\"startTime\":\"").append(jsonEscape(s.startTime)).append("\",")
+                    .append("\"endTime\":\"").append(jsonEscape(s.endTime)).append("\",")
+                    .append("\"time\":\"").append(jsonEscape(s.time)).append("\",")
+                    .append("\"requestType\":\"").append(jsonEscape(s.requestType)).append("\"")
+                    .append("}");
 
             if (i < sessions.size() - 1) {
                 json.append(",");
@@ -115,7 +125,8 @@ public class ApiController {
         json.append("\"notifications\":[");
         for (int i = 0; i < notifications.size(); i++) {
             json.append(notificationToJson(notifications.get(i)));
-            if (i < notifications.size() - 1) json.append(",");
+            if (i < notifications.size() - 1)
+                json.append(",");
         }
         json.append("],");
         json.append("\"unreadCount\":").append(NotificationStore.getUnreadCount());
@@ -123,33 +134,56 @@ public class ApiController {
         return json.toString();
     }
 
+    private static String complaintsToJson(List<model.Complaint> complaints) {
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < complaints.size(); i++) {
+            model.Complaint c = complaints.get(i);
+            json.append("{")
+                    .append("\"id\":\"").append(jsonEscape(c.id)).append("\",")
+                    .append("\"room\":\"").append(jsonEscape(c.room)).append("\",")
+                    .append("\"feature\":\"").append(jsonEscape(c.feature)).append("\",")
+                    .append("\"status\":\"").append(jsonEscape(c.status)).append("\",")
+                    .append("\"createdAt\":").append(c.createdAt)
+                    .append("}");
+            if (i < complaints.size() - 1)
+                json.append(",");
+        }
+        json.append("]");
+        return json.toString();
+    }
+
     // ── Simple JSON field parser (no external deps) ──
     private static String extractJsonField(String json, String field) {
-        String key = "\"" + field + "\"";
-        int idx = json.indexOf(key);
-        if (idx == -1) return "";
-        idx = json.indexOf(":", idx) + 1;
-        // skip whitespace
-        while (idx < json.length() && json.charAt(idx) == ' ') idx++;
-        if (idx >= json.length()) return "";
-        
-        if (json.charAt(idx) == '"') {
-            // string value
-            int start = idx + 1;
-            int end = start;
-            while (end < json.length()) {
-                if (json.charAt(end) == '\\') { end += 2; continue; }
-                if (json.charAt(end) == '"') break;
-                end++;
+        if (json == null || json.isEmpty())
+            return "";
+        try {
+            // Regex for string values: "field"\s*:\s*"value"
+            java.util.regex.Pattern stringPattern = java.util.regex.Pattern
+                    .compile("\"" + field + "\"\\s*:\\s*\"(([^\"]|\\\\\")*)\"");
+            java.util.regex.Matcher stringMatcher = stringPattern.matcher(json);
+            if (stringMatcher.find()) {
+                String val = stringMatcher.group(1);
+                // Unescape basic quotes
+                val = val.replace("\\\"", "\"");
+                System.out.println("  [Regex] Extracted '" + field + "' as string: '" + val + "'");
+                return val;
             }
-            return json.substring(start, end);
-        } else {
-            // numeric or boolean
-            int start = idx;
-            int end = start;
-            while (end < json.length() && json.charAt(end) != ',' && json.charAt(end) != '}') end++;
-            return json.substring(start, end).trim();
+
+            // Regex for non-string values: "field"\s*:\s*value (until , or })
+            java.util.regex.Pattern nonStringPattern = java.util.regex.Pattern
+                    .compile("\"" + field + "\"\\s*:\\s*([^,}\\s]*)");
+            java.util.regex.Matcher nonStringMatcher = nonStringPattern.matcher(json);
+            if (nonStringMatcher.find()) {
+                String val = nonStringMatcher.group(1).trim();
+                System.out.println("  [Regex] Extracted '" + field + "' as non-string: '" + val + "'");
+                return val;
+            }
+        } catch (Exception e) {
+            System.err.println("  [Regex] Error extracting field '" + field + "': " + e.getMessage());
         }
+
+        System.out.println("  [Regex] Field '" + field + "' not found or could not be parsed.");
+        return "";
     }
 
     public static void getTimetable(HttpContext ctx) {
@@ -177,7 +211,7 @@ public class ApiController {
     public static void createNotification(HttpContext ctx) {
         try {
             String body = ctx.bodyAsString();
-            
+
             String type = extractJsonField(body, "type");
             String faculty = extractJsonField(body, "faculty");
             String subjectName = extractJsonField(body, "subjectName");
@@ -192,20 +226,30 @@ public class ApiController {
             String newStartTime = extractJsonField(body, "newStartTime");
             String newEndTime = extractJsonField(body, "newEndTime");
             String newRoom = extractJsonField(body, "newRoom");
+            String isOverrideStr = extractJsonField(body, "isOverride");
+            boolean isOverride = "true".equalsIgnoreCase(isOverrideStr);
 
-            if (type.isEmpty()) type = "reschedule";
+            // Bug Fix: Check if room has active complaints
+            if (!isOverride && data.ComplaintStore.hasActiveComplaint(newRoom)) {
+                ctx.status(400).send(
+                        "{\"success\":false,\"error\":\"Requested room has active maintenance issues. Use Priority Override to bypass.\"}");
+                return;
+            }
+
+            if (type.isEmpty())
+                type = "reschedule";
 
             String title;
             String message;
 
             if ("reschedule".equals(type)) {
                 title = "Lecture Rescheduled: " + subjectName;
-                message = faculty + " has rescheduled " + subjectName + " from " 
+                message = faculty + " has rescheduled " + subjectName + " from "
                         + oldDay + " " + oldStartTime + "-" + oldEndTime + " (" + oldRoom + ")"
                         + " to " + newDay + " " + newStartTime + "-" + newEndTime + " (" + newRoom + ")";
             } else if ("extra".equals(type)) {
                 title = "Extra Lecture: " + subjectName;
-                message = faculty + " has scheduled an extra lecture for " + subjectName 
+                message = faculty + " has scheduled an extra lecture for " + subjectName
                         + " on " + newDay + " " + newStartTime + "-" + newEndTime + " in " + newRoom;
             } else {
                 title = "Schedule Update: " + subjectName;
@@ -214,36 +258,35 @@ public class ApiController {
 
             String id = NotificationStore.nextId();
             Notification notification = new Notification(
-                id, type, title, message, faculty, subjectName,
-                className, section, batch,
-                oldDay, oldStartTime, oldEndTime, oldRoom,
-                newDay, newStartTime, newEndTime, newRoom,
-                System.currentTimeMillis()
-            );
+                    id, type, title, message, faculty, subjectName,
+                    className, section, batch,
+                    oldDay, oldStartTime, oldEndTime, oldRoom,
+                    newDay, newStartTime, newEndTime, newRoom,
+                    System.currentTimeMillis());
 
             NotificationStore.addNotification(notification);
 
             // Also add to ExtraSessionStore so it shows up globally in timetables
             if ("extra".equals(type) || "reschedule".equals(type)) {
                 Session newSession = new Session(
-                    "EXT-" + id,
-                    subjectName,
-                    subjectName,
-                    faculty,
-                    newRoom,
-                    className,
-                    "lecture", // Default for extra, can be refined
-                    section,
-                    batch,
-                    newDay,
-                    newStartTime,
-                    newEndTime,
-                    type
-                );
+                        "EXT-" + id,
+                        subjectName,
+                        subjectName,
+                        faculty,
+                        newRoom,
+                        className,
+                        "lecture", // Default for extra, can be refined
+                        section,
+                        batch,
+                        newDay,
+                        newStartTime,
+                        newEndTime,
+                        type);
                 data.ExtraSessionStore.addSession(newSession);
             }
 
-            ctx.send("{\"success\":true,\"id\":\"" + jsonEscape(id) + "\",\"notification\":" + notificationToJson(notification) + "}");
+            ctx.send("{\"success\":true,\"id\":\"" + jsonEscape(id) + "\",\"notification\":"
+                    + notificationToJson(notification) + "}");
         } catch (Exception e) {
             ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
         }
@@ -276,25 +319,130 @@ public class ApiController {
         }
     }
 
+    public static void login(HttpContext ctx) {
+        try {
+            String body = ctx.bodyAsString();
+            System.out.println("Login Request Body: " + body);
+
+            String role = extractJsonField(body, "role");
+            String email = extractJsonField(body, "email");
+            String password = extractJsonField(body, "password");
+
+            // Admin Logic
+            if ("admin".equals(role)) {
+                String adminUser = System.getenv("ADMIN_USERNAME");
+                String adminPass = System.getenv("ADMIN_PASSWORD");
+
+                // Fallbacks if env not set for dev
+                if (adminUser == null)
+                    adminUser = "admin";
+                if (adminPass == null)
+                    adminPass = "admin123";
+
+                if (adminUser.equals(email) && adminPass.equals(password)) {
+                    ctx.send("{\"success\":true,\"role\":\"admin\"}");
+                } else {
+                    ctx.status(401).send("{\"success\":false,\"error\":\"Invalid admin credentials\"}");
+                }
+                return;
+            }
+
+            if ("student".equals(role)) {
+                ctx.send("{\"success\":true}");
+                return;
+            }
+
+            if (FACULTY_CREDENTIALS.containsKey(email)) {
+                String expected = FACULTY_CREDENTIALS.get(email);
+                if (expected.equals(password)) {
+                    ctx.send("{\"success\":true}");
+                } else {
+                    ctx.status(401).send("{\"success\":false,\"error\":\"Invalid faculty credentials\"}");
+                }
+            } else {
+                ctx.status(401).send("{\"success\":false,\"error\":\"Invalid faculty credentials\"}");
+            }
+        } catch (Exception e) {
+            ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
+        }
+    }
+
     private static String cycleResultToJson(graph.Graph.CycleResult res) {
         StringBuilder json = new StringBuilder("{");
         json.append("\"hasCycle\":").append(res.hasCycle).append(",");
-        
+
         json.append("\"path\":[");
         for (int i = 0; i < res.path.size(); i++) {
             json.append("\"").append(jsonEscape(res.path.get(i))).append("\"");
-            if (i < res.path.size() - 1) json.append(",");
+            if (i < res.path.size() - 1)
+                json.append(",");
         }
         json.append("],");
 
         json.append("\"logs\":[");
         for (int i = 0; i < res.logs.size(); i++) {
             json.append("\"").append(jsonEscape(res.logs.get(i))).append("\"");
-            if (i < res.logs.size() - 1) json.append(",");
+            if (i < res.logs.size() - 1)
+                json.append(",");
         }
         json.append("]");
-        
+
         json.append("}");
         return json.toString();
+    }
+
+    public static void addComplaint(HttpContext ctx) {
+        try {
+            String body = ctx.bodyAsString();
+            String room = extractJsonField(body, "room");
+            String feature = extractJsonField(body, "feature");
+
+            boolean success = data.ComplaintStore.addComplaint(room, feature);
+            if (success) {
+                ctx.send("{\"success\":true}");
+            } else {
+                ctx.status(400)
+                        .send("{\"success\":false,\"error\":\"Complaint already exists for this room and feature\"}");
+            }
+        } catch (Exception e) {
+            ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
+        }
+    }
+
+    public static void getComplaints(HttpContext ctx) {
+        ctx.send(complaintsToJson(data.ComplaintStore.getAllComplaints()));
+    }
+
+    public static void resolveComplaint(HttpContext ctx) {
+        try {
+            String body = ctx.bodyAsString();
+            String id = extractJsonField(body, "id");
+            boolean success = data.ComplaintStore.resolveComplaint(id);
+            ctx.send("{\"success\":" + success + "}");
+        } catch (Exception e) {
+            ctx.status(400).send("{\"success\":false}");
+        }
+    }
+
+    public static void getAvailableRooms(HttpContext ctx) {
+        try {
+            String body = ctx.bodyAsString();
+            String day = extractJsonField(body, "day");
+            String startTime = extractJsonField(body, "startTime");
+            String endTime = extractJsonField(body, "endTime");
+
+            List<String> rooms = ts.getAvailableRooms(day, startTime, endTime);
+
+            StringBuilder json = new StringBuilder("[");
+            for (int i = 0; i < rooms.size(); i++) {
+                json.append("\"").append(jsonEscape(rooms.get(i))).append("\"");
+                if (i < rooms.size() - 1)
+                    json.append(",");
+            }
+            json.append("]");
+            ctx.send(json.toString());
+        } catch (Exception e) {
+            ctx.status(400).send("{\"success\":false,\"error\":\"" + jsonEscape(e.getMessage()) + "\"}");
+        }
     }
 }
